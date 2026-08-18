@@ -1,0 +1,806 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#158a63">
+<title>Truki — trueque de ropa</title>
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+  :root{
+    --paper:#f5f5ee; --card:#fffffb; --ink:#201f19; --muted:#6c6a5f;
+    --line:#e7e4d7; --line-2:#dcd8c7;
+    --give:#158a63; --get:#ef5f4c; --gold:#c98a1e;
+    --give-soft:#e2f1ea; --get-soft:#fde7e3;
+    --shadow:0 1px 0 rgba(0,0,0,.02), 0 12px 30px -20px rgba(40,30,10,.35);
+    --shadow-card:0 2px 4px rgba(40,30,10,.06), 0 30px 60px -30px rgba(40,30,10,.5);
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,monospace;
+    --r:18px;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --paper:#14140f; --card:#1e1d16; --ink:#efece1; --muted:#a3a091;
+    --line:#2c2a21; --line-2:#3a372c;
+    --give:#2fc38a; --get:#ff7a68; --gold:#e0aa4c;
+    --give-soft:#132a22; --get-soft:#2e1a16;
+    --shadow:0 1px 0 rgba(255,255,255,.02), 0 14px 34px -22px rgba(0,0,0,.7);
+    --shadow-card:0 2px 4px rgba(0,0,0,.3), 0 30px 60px -30px rgba(0,0,0,.8);
+  }}
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0; height:100%}
+  body{
+    background:var(--paper); color:var(--ink); font-family:var(--sans); line-height:1.5;
+    overflow:hidden; user-select:none;
+  }
+  /* Phone frame — centra la app y simula un móvil en desktop */
+  #app{
+    position:relative; width:100%; max-width:440px; height:100dvh; max-height:920px; margin:0 auto;
+    background:var(--paper); display:flex; flex-direction:column; overflow:hidden;
+  }
+  @media(min-width:520px){
+    body{display:flex; align-items:center; justify-content:center; padding:24px; background:#0000000a}
+    #app{border:1px solid var(--line-2); border-radius:32px; box-shadow:var(--shadow-card); overflow:hidden}
+  }
+  .screen{flex:1; display:none; flex-direction:column; overflow:hidden; min-height:0}
+  .screen.active{display:flex}
+  .scroll{flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch}
+
+  /* Topbar */
+  .top{display:flex; align-items:center; gap:10px; padding:14px 18px calc(12px);
+    padding-top:max(14px,env(safe-area-inset-top)); border-bottom:1px solid var(--line); background:var(--card)}
+  .brand{font-weight:850; font-size:22px; letter-spacing:-.02em}
+  .brand b{color:var(--give)} .brand i{font-style:normal; color:var(--get)}
+  .top .spacer{flex:1}
+  .chip-pts{display:inline-flex; align-items:center; gap:6px; font-weight:800; font-size:14px;
+    background:var(--gold); color:#1a1206; padding:7px 12px; border-radius:999px; cursor:pointer}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .chip-pts{color:#1a1206}}
+  .chip-insti{font-family:var(--mono); font-size:10.5px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--muted); background:var(--paper); border:1px solid var(--line); padding:4px 8px; border-radius:999px}
+
+  /* Bottom nav */
+  .nav{display:flex; border-top:1px solid var(--line); background:var(--card);
+    padding-bottom:env(safe-area-inset-bottom)}
+  .nav button{flex:1; background:none; border:0; padding:9px 0 8px; color:var(--muted);
+    font-size:10.5px; font-weight:700; display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; font-family:inherit}
+  .nav button .ic{font-size:21px; line-height:1}
+  .nav button.on{color:var(--give)}
+  .nav button.on.get{color:var(--get)}
+  .nav .badge{position:relative}
+  .nav .badge[data-n]:not([data-n="0"])::after{content:attr(data-n); position:absolute; top:-4px; right:-10px;
+    background:var(--get); color:#fff; font-size:9px; font-weight:800; min-width:15px; height:15px; padding:0 3px;
+    border-radius:999px; display:grid; place-items:center}
+
+  /* Buttons */
+  .btn{appearance:none; border:0; font-family:inherit; font-weight:800; font-size:16px; cursor:pointer;
+    border-radius:14px; padding:14px 18px; width:100%; transition:transform .06s ease, filter .15s ease}
+  .btn:active{transform:translateY(1px) scale(.995)}
+  .btn.give{background:var(--give); color:#fff}
+  .btn.get{background:var(--get); color:#fff}
+  .btn.gold{background:var(--gold); color:#1a1206}
+  .btn.ghost{background:transparent; color:var(--ink); border:1.5px solid var(--line-2)}
+  .btn.sm{padding:11px 14px; font-size:14px; border-radius:12px; width:auto}
+  .btn[disabled]{opacity:.45; cursor:not-allowed}
+
+  /* Onboarding */
+  .ob{padding:26px 22px; display:flex; flex-direction:column; gap:0; min-height:0; flex:1; overflow-y:auto}
+  .ob .kicker{font-family:var(--mono); font-size:11.5px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin:6px 0 14px}
+  .logo-xl{font-size:clamp(56px,17vw,80px); font-weight:850; line-height:.85; margin:0 0 6px; letter-spacing:-.03em}
+  .logo-xl b{color:var(--give)} .logo-xl i{font-style:normal; color:var(--get)}
+  .tag{font-size:20px; font-weight:750; margin:14px 0 4px}
+  .tag .g{color:var(--get)}
+  .sub{color:var(--muted); font-size:15px; margin:0 0 8px; max-width:34ch}
+  label.fld{display:block; font-weight:700; font-size:13px; margin:18px 0 7px}
+  input.txt{width:100%; font:inherit; font-size:16px; padding:13px 14px; border-radius:12px;
+    border:1.5px solid var(--line-2); background:var(--card); color:var(--ink)}
+  input.txt:focus{outline:2px solid var(--give); border-color:var(--give)}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:7px}
+  .pick{border:1.5px solid var(--line-2); background:var(--card); border-radius:13px; padding:12px 10px;
+    font-weight:750; font-size:14px; cursor:pointer; text-align:left; color:var(--ink); font-family:inherit; display:flex; align-items:center; gap:8px}
+  .pick .e{font-size:20px}
+  .pick.sel{border-color:var(--give); background:var(--give-soft); box-shadow:inset 0 0 0 1px var(--give)}
+  .note{background:var(--give-soft); border:1px solid var(--line-2); border-radius:14px; padding:13px 15px;
+    font-size:13.5px; color:var(--ink); margin-top:18px}
+  .note b{color:var(--give)}
+  .steps{display:flex; gap:6px; margin:22px 0 4px}
+  .steps i{height:5px; flex:1; border-radius:3px; background:var(--line-2)}
+  .steps i.on{background:var(--give)}
+
+  /* Seed prendas (elige tu armario) */
+  .seedgrid{display:grid; grid-template-columns:1fr 1fr; gap:11px; margin-top:12px}
+  .seed{border:1.5px solid var(--line-2); background:var(--card); border-radius:16px; padding:14px 12px 12px;
+    cursor:pointer; text-align:center; position:relative; color:var(--ink); font-family:inherit}
+  .seed .big{font-size:40px; line-height:1; margin-bottom:6px}
+  .seed .nm{font-weight:750; font-size:13.5px}
+  .seed .pt{font-size:12px; color:var(--muted); margin-top:2px}
+  .seed.sel{border-color:var(--give); background:var(--give-soft)}
+  .seed.sel::after{content:"✓"; position:absolute; top:8px; right:9px; width:22px; height:22px; border-radius:999px;
+    background:var(--give); color:#fff; font-size:13px; font-weight:800; display:grid; place-items:center}
+
+  /* Swipe deck */
+  .deckwrap{flex:1; position:relative; margin:14px 18px 6px; min-height:0}
+  .cardx{position:absolute; inset:0; background:var(--card); border:1px solid var(--line); border-radius:24px;
+    box-shadow:var(--shadow-card); overflow:hidden; display:flex; flex-direction:column; will-change:transform; touch-action:none}
+  .cardx .photo{flex:1; display:grid; place-items:center; font-size:104px;
+    background:radial-gradient(120% 90% at 50% 20%, color-mix(in srgb,var(--give) 14%, var(--card)), var(--card))}
+  .cardx .meta{padding:15px 17px 17px; border-top:1px solid var(--line)}
+  .cardx .row1{display:flex; align-items:baseline; gap:8px}
+  .cardx .nm{font-weight:800; font-size:20px; letter-spacing:-.01em}
+  .cardx .pts{margin-left:auto; font-weight:850; color:var(--gold); font-size:17px; white-space:nowrap}
+  .cardx .tags{display:flex; flex-wrap:wrap; gap:6px; margin-top:9px}
+  .tagpill{font-size:11.5px; font-weight:700; color:var(--muted); background:var(--paper);
+    border:1px solid var(--line); padding:3px 9px; border-radius:999px}
+  .cardx .owner{font-size:12.5px; color:var(--muted); margin-top:10px}
+  .cardx .owner b{color:var(--ink)}
+  .stampL,.stampR{position:absolute; top:22px; font-weight:900; font-size:30px; padding:5px 14px; border-radius:12px;
+    border:4px solid; letter-spacing:.04em; opacity:0; transform:rotate(-12deg); pointer-events:none}
+  .stampR{left:20px; color:var(--give); border-color:var(--give); transform:rotate(-14deg)}
+  .stampL{right:20px; color:var(--get); border-color:var(--get); transform:rotate(14deg)}
+  .deck-actions{display:flex; justify-content:center; align-items:center; gap:18px; padding:8px 0 16px}
+  .fab{width:60px; height:60px; border-radius:999px; border:1px solid var(--line); background:var(--card);
+    box-shadow:var(--shadow); font-size:26px; cursor:pointer; display:grid; place-items:center; transition:transform .08s}
+  .fab:active{transform:scale(.9)}
+  .fab.nope{color:var(--get)} .fab.like{color:var(--give); width:68px; height:68px; font-size:30px}
+  .fab.star{color:var(--gold); font-size:22px; width:52px; height:52px}
+  .empty{position:absolute; inset:0; display:grid; place-content:center; text-align:center; gap:8px; padding:30px; color:var(--muted)}
+  .empty .big{font-size:60px}
+
+  /* Generic list card */
+  .sec{padding:16px 18px}
+  .sec h2{font-size:20px; margin:2px 0 4px; font-weight:800}
+  .sec .lead{color:var(--muted); font-size:14px; margin:0 0 14px}
+  .eyebrow{display:inline-flex; align-items:center; gap:8px; font-family:var(--mono); font-size:11px;
+    letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin:0 0 12px}
+  .eyebrow::before{content:""; width:20px; height:2px; background:var(--get); border-radius:2px}
+  .item{display:flex; gap:13px; align-items:center; background:var(--card); border:1px solid var(--line);
+    border-radius:16px; padding:12px 14px; margin-bottom:10px; box-shadow:var(--shadow)}
+  .item .ph{width:52px; height:52px; border-radius:12px; background:var(--paper); display:grid; place-items:center;
+    font-size:30px; border:1px solid var(--line); flex-shrink:0}
+  .item .tt{font-weight:750; font-size:15px}
+  .item .st{font-size:12.5px; color:var(--muted)}
+  .item .pt{margin-left:auto; font-weight:850; color:var(--gold); font-size:15px; white-space:nowrap; text-align:right}
+  .item.match{cursor:pointer}
+  .item.match .go{margin-left:auto; color:var(--give); font-weight:800; font-size:20px}
+
+  /* Wallet */
+  .balcard{margin:6px 18px 4px; background:linear-gradient(120deg, color-mix(in srgb,var(--gold) 20%, var(--card)), var(--card));
+    border:1px solid var(--line-2); border-radius:20px; padding:20px; box-shadow:var(--shadow)}
+  .balcard .l{font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted)}
+  .balcard .n{font-size:44px; font-weight:850; letter-spacing:-.02em; margin:4px 0 0; display:flex; align-items:center; gap:8px}
+  .balcard .n .u{font-size:15px; color:var(--muted); font-weight:700}
+  .packgrid{display:grid; grid-template-columns:1fr 1fr; gap:11px; margin:12px 0}
+  .pack{border:1.5px solid var(--line-2); background:var(--card); border-radius:16px; padding:15px 12px; text-align:center;
+    cursor:pointer; color:var(--ink); font-family:inherit; position:relative}
+  .pack.best{border-color:var(--gold)}
+  .pack.best::before{content:"POPULAR"; position:absolute; top:-9px; left:50%; transform:translateX(-50%);
+    background:var(--gold); color:#1a1206; font-size:9px; font-weight:850; letter-spacing:.08em; padding:3px 9px; border-radius:999px}
+  .pack .amt{font-size:26px; font-weight:850; color:var(--gold)}
+  .pack .amt small{font-size:13px}
+  .pack .eur{font-size:14px; font-weight:750; margin-top:4px}
+  .pack .per{font-size:11px; color:var(--muted); margin-top:2px}
+  .txrow{display:flex; align-items:center; gap:10px; padding:11px 2px; border-bottom:1px solid var(--line); font-size:14px}
+  .txrow .d{flex:1}
+  .txrow .d small{color:var(--muted); font-size:12px; display:block}
+  .txrow .v{font-weight:800; white-space:nowrap}
+  .txrow .v.plus{color:var(--give)} .txrow .v.minus{color:var(--get)}
+
+  /* Profile */
+  .prof{padding:22px 18px; text-align:center}
+  .ava{width:84px; height:84px; border-radius:999px; margin:0 auto 10px; display:grid; place-items:center;
+    font-size:44px; background:var(--give-soft); border:1px solid var(--line-2)}
+  .prof .nm{font-size:22px; font-weight:850}
+  .prof .in{color:var(--muted); font-size:13.5px; margin-top:2px}
+  .kpis{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:18px 0}
+  .kpi{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:13px 8px; box-shadow:var(--shadow)}
+  .kpi .n{font-size:24px; font-weight:850; letter-spacing:-.02em}
+  .kpi .n.give{color:var(--give)} .kpi .n.get{color:var(--get)} .kpi .n.gold{color:var(--gold)}
+  .kpi .l{font-size:11px; color:var(--muted); margin-top:3px}
+  .badges{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:6px}
+  .bdg{font-size:12.5px; font-weight:700; background:var(--card); border:1px solid var(--line);
+    border-radius:999px; padding:6px 12px; box-shadow:var(--shadow)}
+
+  /* Modal / overlay */
+  .ov{position:absolute; inset:0; z-index:40; background:rgba(20,15,5,.55); backdrop-filter:blur(3px);
+    display:none; align-items:flex-end; justify-content:center; padding:0}
+  .ov.show{display:flex}
+  .sheet{background:var(--card); width:100%; max-width:440px; border-radius:26px 26px 0 0; padding:22px 20px;
+    padding-bottom:max(22px,env(safe-area-inset-bottom)); box-shadow:var(--shadow-card); animation:up .28s cubic-bezier(.2,.8,.2,1)}
+  @keyframes up{from{transform:translateY(100%)} to{transform:translateY(0)}}
+  .sheet h3{margin:2px 0 6px; font-size:22px; font-weight:850; letter-spacing:-.01em}
+  .sheet p{margin:0 0 14px; color:var(--muted); font-size:14px}
+  .grab{width:40px; height:5px; border-radius:3px; background:var(--line-2); margin:0 auto 14px}
+
+  /* Match celebration */
+  .matchov{position:absolute; inset:0; z-index:50; display:none; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:30px; background:linear-gradient(160deg, color-mix(in srgb,var(--give) 30%, var(--paper)), color-mix(in srgb,var(--get) 26%, var(--paper)))}
+  .matchov.show{display:flex; animation:fade .3s}
+  @keyframes fade{from{opacity:0} to{opacity:1}}
+  .matchov .mt{font-size:clamp(46px,15vw,70px); font-weight:850; line-height:.9; letter-spacing:-.03em; margin:0}
+  .matchov .mt b{color:var(--give)} .matchov .mt i{font-style:normal; color:var(--get)}
+  .matchov .pair{display:flex; gap:16px; align-items:center; margin:26px 0}
+  .matchov .pp{width:96px; height:96px; border-radius:22px; background:var(--card); border:1px solid var(--line);
+    display:grid; place-items:center; font-size:52px; box-shadow:var(--shadow-card)}
+  .matchov .amp{font-size:34px; color:var(--get); font-weight:850}
+  .matchov p{max-width:26ch; color:var(--ink); font-weight:600; margin:0 0 24px}
+  .matchov .acts{width:100%; max-width:300px; display:flex; flex-direction:column; gap:10px}
+
+  /* Trade */
+  .trade{padding:16px 18px}
+  .vs{display:grid; grid-template-columns:1fr auto 1fr; gap:10px; align-items:stretch; margin:6px 0 14px}
+  .side{background:var(--card); border:1.5px solid var(--line-2); border-radius:18px; padding:14px 12px; text-align:center}
+  .side.you{border-color:var(--get)} .side.them{border-color:var(--give)}
+  .side .lbl{font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:8px}
+  .side .big{font-size:52px; line-height:1}
+  .side .nm{font-weight:750; font-size:14px; margin-top:8px}
+  .side .pt{font-weight:850; color:var(--gold); font-size:15px; margin-top:3px}
+  .vs .mid{display:grid; place-items:center; font-size:24px; color:var(--muted)}
+  .side.pick-slot{cursor:pointer; display:grid; place-items:center; color:var(--muted)}
+  .side.pick-slot .plus{font-size:30px}
+  .balance-line{text-align:center; font-size:15px; font-weight:750; padding:14px; border-radius:16px; margin:4px 0 14px}
+  .balance-line.even{background:var(--give-soft); color:var(--give)}
+  .balance-line.pay{background:var(--get-soft); color:var(--get)}
+  .balance-line.earn{background:var(--give-soft); color:var(--give)}
+  .balance-line small{display:block; font-weight:600; color:var(--muted); margin-top:3px; font-size:12.5px}
+
+  .toast{position:absolute; left:50%; bottom:84px; transform:translateX(-50%) translateY(20px); z-index:60;
+    background:var(--ink); color:var(--paper); font-weight:750; font-size:13.5px; padding:11px 16px; border-radius:999px;
+    opacity:0; transition:.25s; pointer-events:none; box-shadow:var(--shadow-card); max-width:88%; text-align:center}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  .hidden{display:none!important}
+</style>
+
+<div id="app">
+  <!-- ===== ONBOARDING ===== -->
+  <section id="s-onboard" class="screen active">
+    <div class="ob" id="ob-body"><!-- rendered by JS --></div>
+  </section>
+
+  <!-- ===== SWIPE (home) ===== -->
+  <section id="s-swipe" class="screen">
+    <div class="top">
+      <div class="brand"><b>Tru</b><i>ki</i></div>
+      <span class="chip-insti" id="top-insti">—</span>
+      <div class="spacer"></div>
+      <span class="chip-pts" onclick="go('wallet')">🪙 <span id="top-pts">0</span></span>
+    </div>
+    <div class="deckwrap" id="deck"></div>
+    <div class="deck-actions">
+      <button class="fab nope" onclick="swipe('left')" aria-label="Paso">✕</button>
+      <button class="fab star" onclick="superLike()" aria-label="Destacar">★</button>
+      <button class="fab like" onclick="swipe('right')" aria-label="Me interesa">♥</button>
+    </div>
+    <nav class="nav" id="nav"></nav>
+  </section>
+
+  <!-- ===== MATCHES ===== -->
+  <section id="s-matches" class="screen">
+    <div class="top"><div class="brand"><b>Tru</b><i>ki</i></div><div class="spacer"></div>
+      <span class="chip-pts" onclick="go('wallet')">🪙 <span class="mirror-pts">0</span></span></div>
+    <div class="scroll">
+      <div class="sec">
+        <div class="eyebrow">Tus trukis</div>
+        <h2>Matches</h2>
+        <p class="lead">Cuando a las dos os interesa una prenda de la otra → match. Toca para proponer el intercambio.</p>
+        <div id="matches-list"></div>
+      </div>
+    </div>
+    <nav class="nav"></nav>
+  </section>
+
+  <!-- ===== TRADE ===== -->
+  <section id="s-trade" class="screen">
+    <div class="top">
+      <button class="btn ghost sm" onclick="go('matches')" style="width:auto;padding:8px 12px">‹ Volver</button>
+      <div class="spacer"></div><div class="brand"><b>Tru</b><i>ki</i></div>
+    </div>
+    <div class="scroll"><div class="trade" id="trade-body"></div></div>
+  </section>
+
+  <!-- ===== WALLET ===== -->
+  <section id="s-wallet" class="screen">
+    <div class="top"><div class="brand"><b>Tru</b><i>ki</i></div><div class="spacer"></div>
+      <span class="chip-insti">🪙 trukipuntos</span></div>
+    <div class="scroll">
+      <div class="balcard">
+        <div class="l">Tu saldo</div>
+        <div class="n"><span id="bal-n">0</span> <span class="u">trukipuntos</span></div>
+      </div>
+      <div class="sec" style="padding-top:8px">
+        <div class="eyebrow">Recarga</div>
+        <h2 style="font-size:18px">¿Te faltan para cuadrar un cambio?</h2>
+        <p class="lead">Solo necesitas puntos cuando la otra persona no quiere cambio directo y hay diferencia de valor. Aquí es donde Truki gana dinero.</p>
+        <div class="packgrid" id="packs"></div>
+        <div class="eyebrow" style="margin-top:8px">Movimientos</div>
+        <div id="tx-list"></div>
+      </div>
+    </div>
+    <nav class="nav"></nav>
+  </section>
+
+  <!-- ===== PROFILE ===== -->
+  <section id="s-profile" class="screen">
+    <div class="top"><div class="brand"><b>Tru</b><i>ki</i></div><div class="spacer"></div>
+      <span class="chip-pts" onclick="go('wallet')">🪙 <span class="mirror-pts">0</span></span></div>
+    <div class="scroll">
+      <div class="prof" id="prof-head"></div>
+      <div class="sec" style="padding-top:0">
+        <div class="eyebrow">Mi armario</div>
+        <div id="armario-list"></div>
+        <button class="btn ghost" style="margin-top:6px" onclick="toast('En el MVP real: subir foto + categoría 📸')">＋ Subir prenda</button>
+      </div>
+    </div>
+    <nav class="nav"></nav>
+  </section>
+
+  <!-- overlays -->
+  <div class="matchov" id="matchov"></div>
+  <div class="ov" id="ov"><div class="sheet" id="ov-sheet"></div></div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* =========================================================================
+   TRUKI · Prototipo clicable (Fase 0) — datos falsos, sin backend.
+   Filosofía de puntos (decidida con Alex + hija):
+   · Empiezas con 0 trukipuntos (nada de regalo → evita "gorroneadores").
+   · Para entrar debes subir prendas (aportas desde el minuto uno).
+   · Los puntos se GANAN dando; solo hacen falta para CUADRAR diferencias.
+   · Cambio directo si ambos aceptan (matiz HomeExchange, humano).
+   ========================================================================= */
+
+/* ---- Modelo de valoración: base por categoría × estado ---- */
+const CATS = {
+  accesorio: {base:10, label:"Accesorio"},
+  camiseta:  {base:15, label:"Camiseta / top"},
+  camisa:    {base:25, label:"Camisa / jersey"},
+  pantalon:  {base:30, label:"Pantalón / falda / vestido"},
+  sudadera:  {base:40, label:"Sudadera / chaqueta"},
+  abrigo:    {base:50, label:"Abrigo / calzado"},
+};
+const ESTADOS = {
+  nuevo:     {mult:1.5, label:"Nuevo con etiqueta"},
+  comonuevo: {mult:1.2, label:"Como nuevo"},
+  bueno:     {mult:1.0, label:"Buen estado"},
+  usado:     {mult:0.7, label:"Con uso"},
+};
+const val = it => Math.round(CATS[it.cat].base * ESTADOS[it.estado].mult);
+
+/* ---- Catálogo falso para elegir armario en el onboarding ---- */
+const SEEDS = [
+  {emoji:"👖", nm:"Vaqueros mom",       cat:"pantalon", estado:"comonuevo"},
+  {emoji:"🧥", nm:"Cazadora vaquera",    cat:"sudadera", estado:"bueno"},
+  {emoji:"👕", nm:"Camiseta oversize",   cat:"camiseta", estado:"comonuevo"},
+  {emoji:"👗", nm:"Vestido flores",      cat:"pantalon", estado:"nuevo"},
+  {emoji:"👟", nm:"Zapatillas retro",    cat:"abrigo",   estado:"usado"},
+  {emoji:"🧣", nm:"Bufanda de punto",    cat:"accesorio",estado:"bueno"},
+];
+
+/* ---- Prendas de "otras personas" para el swipe ---- */
+const CATALOG = [
+  {emoji:"🧥", nm:"Abrigo teddy",       cat:"abrigo",   estado:"comonuevo", owner:"Nahia",  age:16, marca:"Zara"},
+  {emoji:"👜", nm:"Bolso bandolera",    cat:"accesorio",estado:"bueno",     owner:"June",   age:15, marca:"Bershka"},
+  {emoji:"👟", nm:"Air Force blancas",  cat:"abrigo",   estado:"comonuevo", owner:"Ander",  age:17, marca:"Nike"},
+  {emoji:"👗", nm:"Vestido midi verde", cat:"pantalon", estado:"nuevo",     owner:"Malen",  age:16, marca:"Pull&Bear"},
+  {emoji:"🧶", nm:"Jersey de lana",     cat:"camisa",   estado:"bueno",     owner:"Uxue",   age:15, marca:"H&M"},
+  {emoji:"👕", nm:"Camiseta banda rock",cat:"camiseta", estado:"usado",     owner:"Ibai",   age:17, marca:"Vintage"},
+  {emoji:"🧢", nm:"Gorra beige",        cat:"accesorio",estado:"comonuevo", owner:"Lide",   age:16, marca:"Carhartt"},
+  {emoji:"👖", nm:"Cargo pants",        cat:"pantalon", estado:"comonuevo", owner:"Oier",   age:16, marca:"Jaded"},
+  {emoji:"🧥", nm:"Sudadera capucha",   cat:"sudadera", estado:"bueno",     owner:"Ane",    age:15, marca:"Champion"},
+  {emoji:"👠", nm:"Botines negros",     cat:"abrigo",   estado:"bueno",     owner:"Maddi",  age:17, marca:"Stradivarius"},
+];
+const INSTIS = ["IES Botika","Insti Santutxu","IES Miribilla","Deusto BHI","Begoñazpi"];
+
+/* ---- Estado de la app ---- */
+const S = {
+  screen:"onboard",
+  user:{ name:"", insti:"", pts:0, trukis:0 },
+  armario:[],
+  deck:[],            // índices del catálogo pendientes
+  liked:new Set(),
+  matches:[],         // {item, directOffered}
+  tx:[],              // movimientos de puntos
+  tradeCtx:null,      // {matchIdx, myItem}
+};
+
+/* ---- Router ---- */
+const SCREENS = {onboard:"s-onboard", swipe:"s-swipe", matches:"s-matches", trade:"s-trade", wallet:"s-wallet", profile:"s-profile"};
+function go(name){
+  S.screen=name;
+  for(const k in SCREENS) document.getElementById(SCREENS[k]).classList.toggle("active", k===name);
+  if(name==="matches") renderMatches();
+  if(name==="wallet")  renderWallet();
+  if(name==="profile") renderProfile();
+  if(name==="swipe")   renderDeck();
+  syncChrome();
+  const sc=document.getElementById(SCREENS[name]).querySelector(".scroll"); if(sc) sc.scrollTop=0;
+}
+
+/* ---- Bottom nav ---- */
+const NAV=[
+  {k:"swipe",   ic:"🔥", t:"Swipe"},
+  {k:"matches", ic:"💚", t:"Matches", cls:"", badge:true},
+  {k:"wallet",  ic:"🪙", t:"Puntos"},
+  {k:"profile", ic:"👤", t:"Perfil"},
+];
+function renderNav(){
+  document.querySelectorAll(".nav").forEach(nav=>{
+    nav.innerHTML = NAV.map(n=>`
+      <button class="${S.screen===n.k?(n.k==='matches'?'on get':'on'):''}" onclick="go('${n.k}')">
+        <span class="ic ${n.badge?'badge':''}" ${n.badge?`data-n="${S.matches.length}"`:''}>${n.ic}</span>${n.t}
+      </button>`).join("");
+  });
+}
+function syncChrome(){
+  document.getElementById("top-pts").textContent=S.user.pts;
+  document.querySelectorAll(".mirror-pts").forEach(e=>e.textContent=S.user.pts);
+  document.getElementById("top-insti").textContent="📍 "+(S.user.insti||"—");
+  renderNav();
+}
+
+/* ==================== ONBOARDING ==================== */
+let obStep=0, obPickInsti=null, obSeeds=new Set();
+function renderOnboard(){
+  const b=document.getElementById("ob-body");
+  if(obStep===0){
+    b.innerHTML=`
+      <p class="kicker">Trukatu · intercambiar en euskara</p>
+      <h1 class="logo-xl"><b>Tru</b><i>ki</i></h1>
+      <p class="tag">Cambia ropa. <span class="g">Sin dinero.</span></p>
+      <p class="sub">Deslizas prendas, haces match y las cambias con gente de tu insti. Moda circular, cero fast-fashion.</p>
+      <div class="note">🔒 <b>Truki empieza cerrado por instituto.</b> No es para todos: entras porque quieres estar, no por un cupón. Aquí no hay puntos de regalo.</div>
+      <div style="flex:1"></div>
+      <div class="steps"><i class="on"></i><i></i><i></i></div>
+      <button class="btn give" style="margin-top:14px" onclick="obNext()">Entrar en Truki</button>`;
+  } else if(obStep===1){
+    b.innerHTML=`
+      <p class="kicker">Paso 1 de 2 · quién eres</p>
+      <h1 style="font-size:28px;margin:6px 0 2px;font-weight:850">Preséntate 👋</h1>
+      <p class="sub">Solo para la demo — nada se guarda en ningún servidor.</p>
+      <label class="fld">Tu nombre o mote</label>
+      <input class="txt" id="in-name" placeholder="p. ej. Alex" value="${S.user.name||''}" autocomplete="off" oninput="S.user.name=this.value">
+      <label class="fld">Tu instituto</label>
+      <div class="grid2" id="insti-grid">
+        ${INSTIS.map((i,x)=>`<button class="pick ${obPickInsti===x?'sel':''}" onclick="pickInsti(${x})"><span class="e">🏫</span>${i}</button>`).join("")}
+      </div>
+      <div style="flex:1;min-height:16px"></div>
+      <div class="steps"><i class="on"></i><i class="on"></i><i></i></div>
+      <button class="btn give" style="margin-top:14px" id="ob-next1" onclick="obNext()">Siguiente</button>`;
+  } else if(obStep===2){
+    const chosen=[...obSeeds];
+    b.innerHTML=`
+      <p class="kicker">Paso 2 de 2 · tu armario</p>
+      <h1 style="font-size:26px;margin:6px 0 2px;font-weight:850">Sube tus primeras prendas</h1>
+      <p class="sub">Elige al menos <b>3</b>. En Truki entras aportando: sin prendas no hay trueque (ni matches para nadie).</p>
+      <div class="seedgrid">
+        ${SEEDS.map((s,x)=>`
+          <button class="seed ${obSeeds.has(x)?'sel':''}" onclick="toggleSeed(${x})">
+            <div class="big">${s.emoji}</div>
+            <div class="nm">${s.nm}</div>
+            <div class="pt">${CATS[s.cat].label} · ${val(s)} pts</div>
+          </button>`).join("")}
+      </div>
+      <div class="note" style="margin-top:16px">💡 <b>Los puntos se ganan dando.</b> Empiezas con <b>0</b>; ganarás trukipuntos cuando alguien se lleve una prenda tuya. Y si ambas aceptáis, podéis hacer <b>cambio directo</b> sin puntos.</div>
+      <div style="flex:1;min-height:10px"></div>
+      <div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i></div>
+      <button class="btn give" style="margin-top:14px" id="ob-go" ${chosen.length<3?'disabled':''} onclick="finishOnboard()">
+        ${chosen.length<3?`Elige ${3-chosen.length} más`:'Empezar a truquear 🔥'}</button>`;
+  }
+}
+function pickInsti(x){ obPickInsti=x; renderOnboard(); }
+function toggleSeed(x){ obSeeds.has(x)?obSeeds.delete(x):obSeeds.add(x); renderOnboard(); }
+function obNext(){
+  if(obStep===1){
+    const nm=document.getElementById("in-name").value.trim();
+    if(!nm){ toast("Ponte un nombre 🙂"); return; }
+    if(obPickInsti===null){ toast("Elige tu instituto 🏫"); return; }
+    S.user.name=nm; S.user.insti=INSTIS[obPickInsti];
+  }
+  obStep++; renderOnboard();
+}
+function finishOnboard(){
+  S.armario=[...obSeeds].map(x=>({...SEEDS[x], id:"a"+x}));
+  S.deck=CATALOG.map((_,i)=>i);
+  syncChrome(); go("swipe"); renderDeck();
+  setTimeout(()=>toast("¡Bienvenida a Truki! Desliza 👉 lo que te gusta"),400);
+}
+
+/* ==================== SWIPE DECK ==================== */
+let drag=null;
+function renderDeck(){
+  const d=document.getElementById("deck");
+  if(!S.deck.length){
+    d.innerHTML=`<div class="empty"><div class="big">🧺</div><b>Por hoy no hay más prendas</b>
+      <div style="font-size:13.5px">Vuelve luego o sube más ropa para que te vean.<br>Revisa tus <a href="#" onclick="go('matches');return false" style="color:var(--give);font-weight:800">matches 💚</a></div></div>`;
+    return;
+  }
+  // pinta hasta 3 cartas (la de arriba es la última del DOM)
+  const show=S.deck.slice(0,3).reverse();
+  d.innerHTML=show.map((ci,idx)=>{
+    const it=CATALOG[ci]; const top=(idx===show.length-1);
+    const depth=show.length-1-idx;
+    return `<div class="cardx" data-ci="${ci}" ${top?'id="topcard"':''}
+      style="transform:scale(${1-depth*0.04}) translateY(${depth*10}px); z-index:${idx}">
+      <div class="stampR">MATCH?</div><div class="stampL">PASO</div>
+      <div class="photo">${it.emoji}</div>
+      <div class="meta">
+        <div class="row1"><span class="nm">${it.nm}</span><span class="pts">${val(it)} 🪙</span></div>
+        <div class="tags">
+          <span class="tagpill">${CATS[it.cat].label}</span>
+          <span class="tagpill">${ESTADOS[it.estado].label}</span>
+          <span class="tagpill">${it.marca}</span>
+        </div>
+        <div class="owner">de <b>${it.owner}</b>, ${it.age} · 📍 ${S.user.insti}</div>
+      </div></div>`;
+  }).join("");
+  attachDrag();
+}
+function attachDrag(){
+  const c=document.getElementById("topcard"); if(!c) return;
+  const onDown=e=>{ drag={x0:e.clientX,y0:e.clientY,dx:0,dy:0}; c.setPointerCapture?.(e.pointerId); };
+  const onMove=e=>{ if(!drag) return; drag.dx=e.clientX-drag.x0; drag.dy=e.clientY-drag.y0;
+    const rot=drag.dx/14; c.style.transition="none";
+    c.style.transform=`translate(${drag.dx}px,${drag.dy}px) rotate(${rot}deg)`;
+    const p=Math.min(Math.abs(drag.dx)/120,1);
+    c.querySelector(".stampR").style.opacity=drag.dx>0?p:0;
+    c.querySelector(".stampL").style.opacity=drag.dx<0?p:0;
+  };
+  const onUp=()=>{ if(!drag) return; const dx=drag.dx; drag=null;
+    if(dx>95) return flyOut("right");
+    if(dx<-95) return flyOut("left");
+    c.style.transition="transform .25s cubic-bezier(.2,.8,.2,1)";
+    c.style.transform=""; c.querySelector(".stampR").style.opacity=0; c.querySelector(".stampL").style.opacity=0;
+  };
+  c.onpointerdown=onDown; c.onpointermove=onMove; c.onpointerup=onUp; c.onpointercancel=onUp;
+}
+function swipe(dir){ const c=document.getElementById("topcard"); if(!c) return; flyOut(dir); }
+function flyOut(dir){
+  const c=document.getElementById("topcard"); if(!c) return;
+  const ci=+c.dataset.ci;
+  c.style.transition="transform .35s ease, opacity .35s ease";
+  c.style.transform=`translate(${dir==="right"?600:-600}px, ${dir==='right'?-40:60}px) rotate(${dir==='right'?30:-30}deg)`;
+  c.style.opacity="0";
+  const liked = dir==="right";
+  setTimeout(()=>{
+    S.deck.shift();
+    if(liked) registerLike(ci);
+    renderDeck();
+  }, liked ? 30 : 220);
+  // el match salta encima; la carta ya vuela
+}
+function superLike(){ const c=document.getElementById("topcard"); if(!c) return;
+  toast("⭐ Destacado — te verá la primera"); flyOut("right"); }
+function registerLike(ci){
+  S.liked.add(ci);
+  // En la demo: ~65% de los likes son mutuos → match
+  const isMatch = (ci % 3 !== 2); // determinista pero variado
+  if(isMatch){
+    S.matches.unshift({ci, direct:false});
+    renderNav();
+    showMatch(CATALOG[ci]);
+  }
+}
+
+/* ==================== MATCH CELEBRATION ==================== */
+function showMatch(it){
+  const m=document.getElementById("matchov");
+  const mine=S.armario[0];
+  m.innerHTML=`
+    <p class="mt">¡<b>MA</b><i>TCH</i>!</p>
+    <div class="pair">
+      <div class="pp">${mine?mine.emoji:"👤"}</div>
+      <div class="amp">×</div>
+      <div class="pp">${it.emoji}</div>
+    </div>
+    <p>A ti y a <b>${it.owner}</b> os gusta una prenda de la otra. ¡Poneos de acuerdo!</p>
+    <div class="acts">
+      <button class="btn give" onclick="hideMatch();openTradeFor(0)">Proponer intercambio</button>
+      <button class="btn ghost" onclick="hideMatch()">Seguir deslizando</button>
+    </div>`;
+  m.classList.add("show");
+}
+function hideMatch(){ document.getElementById("matchov").classList.remove("show"); }
+
+/* ==================== MATCHES LIST ==================== */
+function renderMatches(){
+  const l=document.getElementById("matches-list");
+  if(!S.matches.length){
+    l.innerHTML=`<div style="text-align:center;color:var(--muted);padding:40px 10px">
+      <div style="font-size:52px">💚</div><b>Aún no hay matches</b>
+      <div style="font-size:13.5px;margin-top:6px">Vuelve al <a href="#" onclick="go('swipe');return false" style="color:var(--give);font-weight:800">swipe</a> y desliza 👉</div></div>`;
+    return;
+  }
+  l.innerHTML=S.matches.map((m,idx)=>{
+    const it=CATALOG[m.ci];
+    return `<div class="item match" onclick="openTradeFor(${idx})">
+      <div class="ph">${it.emoji}</div>
+      <div><div class="tt">${it.nm}</div><div class="st">de ${it.owner} · ${val(it)} 🪙 ${m.done?'· ✅ intercambiado':''}</div></div>
+      <div class="go">${m.done?'✅':'›'}</div></div>`;
+  }).join("");
+}
+
+/* ==================== TRADE ==================== */
+function openTradeFor(idx){
+  S.tradeCtx={matchIdx:idx, myItem:null};
+  go("trade"); renderTrade();
+}
+function renderTrade(){
+  const {matchIdx, myItem}=S.tradeCtx;
+  const m=S.matches[matchIdx]; const them=CATALOG[m.ci];
+  const b=document.getElementById("trade-body");
+  if(m.done){
+    b.innerHTML=`<div style="text-align:center;padding:30px 10px">
+      <div style="font-size:60px">🤝</div><h2 style="margin:8px 0 4px">¡Truki hecho!</h2>
+      <p class="lead">Ya habéis intercambiado. En un instituto: quedáis y os lo dais en mano (sin envíos).</p>
+      <button class="btn give" onclick="go('matches')">Ver mis matches</button></div>`;
+    return;
+  }
+  const myVal = myItem ? val(myItem) : 0;
+  const theirVal = val(them);
+  const diff = theirVal - myVal; // >0: recibo algo más caro → pago diferencia
+  b.innerHTML=`
+    <div class="eyebrow">Propón el intercambio</div>
+    <h2 style="margin-bottom:2px">Tú <span style="color:var(--muted)">↔</span> ${them.owner}</h2>
+    <p class="lead">Elige qué prenda tuya ofreces por <b>${them.nm}</b>.</p>
+    <div class="vs">
+      ${ myItem
+        ? `<div class="side you" onclick="pickMineOpen()">
+             <div class="lbl">Tú das</div><div class="big">${myItem.emoji}</div>
+             <div class="nm">${myItem.nm}</div><div class="pt">${myVal} 🪙</div></div>`
+        : `<div class="side you pick-slot" onclick="pickMineOpen()">
+             <div class="plus">＋</div><div class="nm">Elige tu prenda</div></div>` }
+      <div class="mid">↔</div>
+      <div class="side them">
+        <div class="lbl">${them.owner} da</div><div class="big">${them.emoji}</div>
+        <div class="nm">${them.nm}</div><div class="pt">${theirVal} 🪙</div></div>
+    </div>
+    ${ myItem ? balanceLine(diff) : '' }
+    ${ myItem ? tradeActions(diff) : '' }
+    <p class="lead" style="margin-top:16px;font-size:12.5px;text-align:center">
+      🤝 Regla Truki: si <b>ambas aceptáis</b>, el cambio sale aunque los puntos no cuadren. Los puntos solo entran para cuadrar si alguien no quiere el cambio directo.</p>`;
+}
+function balanceLine(diff){
+  if(diff===0) return `<div class="balance-line even">✅ Cambio justo — mismo valor<small>Sin puntos de por medio</small></div>`;
+  if(diff>0)  return `<div class="balance-line pay">Recibes algo de más valor: faltan <b>${diff} 🪙</b> para cuadrar<small>O proponéis cambio directo si ${'a la otra'} le vale</small></div>`;
+  return `<div class="balance-line earn">Das algo de más valor: ganarías <b>${-diff} 🪙</b> al cuadrar<small>O cambio directo, como prefiráis</small></div>`;
+}
+function tradeActions(diff){
+  const canPay = diff<=0 || S.user.pts>=diff;
+  let cuadrarBtn="";
+  if(diff>0){
+    cuadrarBtn = canPay
+      ? `<button class="btn gold" onclick="doTrade('cuadrar',${diff})">Cuadrar con ${diff} 🪙 y cambiar</button>`
+      : `<button class="btn gold" onclick="openBuy(${diff})">Te faltan ${diff-S.user.pts} 🪙 · Conseguir puntos</button>`;
+  } else if(diff<0){
+    cuadrarBtn = `<button class="btn gold" onclick="doTrade('cuadrar',${diff})">Cambiar y ganar ${-diff} 🪙</button>`;
+  } else {
+    cuadrarBtn = `<button class="btn give" onclick="doTrade('even',0)">Confirmar cambio</button>`;
+  }
+  return `<div style="display:flex;flex-direction:column;gap:10px;margin-top:2px">
+    ${cuadrarBtn}
+    <button class="btn ghost" onclick="doTrade('direct',${diff})">Proponer cambio directo 🤝</button>
+  </div>`;
+}
+function pickMineOpen(){
+  const items=S.armario;
+  openSheet(`
+    <div class="grab"></div><h3>¿Qué ofreces?</h3>
+    <p>Una prenda de tu armario a cambio.</p>
+    ${items.map((it,i)=>`
+      <div class="item" style="cursor:pointer;margin-bottom:9px" onclick="chooseMine(${i})">
+        <div class="ph">${it.emoji}</div>
+        <div><div class="tt">${it.nm}</div><div class="st">${CATS[it.cat].label} · ${ESTADOS[it.estado].label}</div></div>
+        <div class="pt">${val(it)} 🪙</div></div>`).join("")}
+  `);
+}
+function chooseMine(i){ S.tradeCtx.myItem=S.armario[i]; closeSheet(); renderTrade(); }
+
+function doTrade(mode, diff){
+  const m=S.matches[S.tradeCtx.matchIdx]; const them=CATALOG[m.ci]; const mine=S.tradeCtx.myItem;
+  if(mode==="direct"){
+    // la otra persona acepta ~ según la prenda (demo)
+    const accepts = (m.ci % 2 === 0) || diff<=0;
+    if(!accepts){
+      toast(`${them.owner} prefiere cuadrar los puntos 🪙`);
+      return;
+    }
+  }
+  // aplica puntos
+  if(mode==="cuadrar"){
+    if(diff>0){ spend(diff, `Cuadrar cambio con ${them.owner}`); }
+    else if(diff<0){ earn(-diff, `Cambio con ${them.owner} (diste más valor)`); }
+  }
+  // completa
+  m.done=true; S.user.trukis++;
+  // sale de tu armario la que diste; entra la nueva
+  S.armario=S.armario.filter(a=>a!==mine);
+  S.armario.unshift({emoji:them.emoji, nm:them.nm, cat:them.cat, estado:them.estado, id:"g"+m.ci});
+  renderNav();
+  const b=document.getElementById("trade-body");
+  b.innerHTML=`<div style="text-align:center;padding:34px 10px">
+      <div style="font-size:64px">🤝</div>
+      <h2 style="margin:10px 0 4px">¡Truki hecho!</h2>
+      <p class="lead">${mode==='direct'?'Cambio directo — sin puntos de por medio 💚':
+        (diff>0?`Cuadraste con ${diff} 🪙`:diff<0?`Ganaste ${-diff} 🪙 💚`:'Cambio justo')}.
+        <br>Ahora quedáis en el insti y os lo dais en mano.</p>
+      <div style="display:flex;flex-direction:column;gap:10px;max-width:280px;margin:16px auto 0">
+        <button class="btn give" onclick="go('profile')">Ver mi armario</button>
+        <button class="btn ghost" onclick="go('swipe')">Seguir deslizando</button>
+      </div></div>`;
+  toast("🎉 ¡Intercambio completado!");
+}
+
+/* ==================== WALLET ==================== */
+const PACKS=[
+  {amt:50,  eur:"2,99 €"},
+  {amt:120, eur:"5,99 €", best:true},
+  {amt:300, eur:"12,99 €"},
+  {amt:700, eur:"24,99 €"},
+];
+function renderWallet(){
+  document.getElementById("bal-n").textContent=S.user.pts;
+  document.getElementById("packs").innerHTML=PACKS.map((p,i)=>`
+    <button class="pack ${p.best?'best':''}" onclick="buyPack(${i})">
+      <div class="amt">${p.amt}<small> 🪙</small></div>
+      <div class="eur">${p.eur}</div>
+      <div class="per">${(parseFloat(p.eur)/p.amt*100).toFixed(1)} c/pto</div>
+    </button>`).join("");
+  const t=document.getElementById("tx-list");
+  t.innerHTML = S.tx.length ? S.tx.map(x=>`
+    <div class="txrow"><div class="d">${x.d}<small>${x.t}</small></div>
+      <div class="v ${x.v>0?'plus':'minus'}">${x.v>0?'+':''}${x.v} 🪙</div></div>`).join("")
+    : `<div style="color:var(--muted);font-size:13.5px;padding:14px 2px">Todavía no hay movimientos. Ganas puntos completando trukis.</div>`;
+}
+function buyPack(i){
+  const p=PACKS[i];
+  openSheet(`<div class="grab"></div><h3>Comprar ${p.amt} trukipuntos</h3>
+    <p>Prototipo — no se cobra nada. Así funcionaría la vía de ingresos principal de Truki.</p>
+    <div class="balance-line even" style="background:var(--give-soft)">${p.amt} 🪙 por ${p.eur}</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn gold" onclick="confirmBuy(${i})">Simular pago ${p.eur}</button>
+      <button class="btn ghost" onclick="closeSheet()">Cancelar</button></div>`);
+}
+function confirmBuy(i){ const p=PACKS[i]; earn(p.amt, `Compra de ${p.amt} trukipuntos`, p.eur); closeSheet();
+  toast(`+${p.amt} 🪙 añadidos`); renderWallet(); }
+function openBuy(diff){
+  // desde el trade, sugiere el pack que cubre lo que falta
+  const need=diff-S.user.pts;
+  const i=PACKS.findIndex(p=>p.amt>=need); buyPack(i<0?PACKS.length-1:i);
+}
+function earn(n, d, t=""){ S.user.pts+=n; S.tx.unshift({v:+n,d,t:t||"Ingreso de puntos"}); syncChrome(); }
+function spend(n, d){ S.user.pts=Math.max(0,S.user.pts-n); S.tx.unshift({v:-n,d,t:"Cuadrar intercambio"}); syncChrome(); }
+
+/* ==================== PROFILE ==================== */
+function renderProfile(){
+  const u=S.user;
+  const armVal=S.armario.reduce((s,i)=>s+val(i),0);
+  document.getElementById("prof-head").innerHTML=`
+    <div class="ava">🧑</div>
+    <div class="nm">${u.name||"Tú"}</div>
+    <div class="in">📍 ${u.insti} · miembro fundador</div>
+    <div class="kpis">
+      <div class="kpi"><div class="n gold">${u.pts}</div><div class="l">Trukipuntos</div></div>
+      <div class="kpi"><div class="n give">${u.trukis}</div><div class="l">Trukis hechos</div></div>
+      <div class="kpi"><div class="n get">${S.armario.length}</div><div class="l">En tu armario</div></div>
+    </div>
+    <div class="badges">
+      <span class="bdg">🌱 Fundador/a</span>
+      ${u.trukis>0?'<span class="bdg">🤝 Primer truki</span>':''}
+      ${u.trukis>=2?'<span class="bdg">🔥 En racha</span>':''}
+      <span class="bdg">♻️ Anti fast-fashion</span>
+    </div>`;
+  const l=document.getElementById("armario-list");
+  l.innerHTML = S.armario.length ? S.armario.map(it=>`
+    <div class="item"><div class="ph">${it.emoji}</div>
+      <div><div class="tt">${it.nm}</div><div class="st">${CATS[it.cat].label} · ${ESTADOS[it.estado].label}</div></div>
+      <div class="pt">${val(it)} 🪙</div></div>`).join("")
+    : `<div style="color:var(--muted);font-size:13.5px;padding:10px 2px">Tu armario está vacío.</div>`;
+}
+
+/* ==================== SHEETS / TOAST ==================== */
+function openSheet(html){ const ov=document.getElementById("ov"); document.getElementById("ov-sheet").innerHTML=html;
+  ov.classList.add("show"); ov.onclick=e=>{ if(e.target===ov) closeSheet(); }; }
+function closeSheet(){ document.getElementById("ov").classList.remove("show"); }
+let toastT;
+function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show");
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),1900); }
+
+/* ==================== INIT ==================== */
+renderOnboard();
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(()=>{}); }
+</script>

@@ -1,0 +1,26 @@
+{
+  "name": "Truki — trueque de ropa",
+  "short_name": "Truki",
+  "description": "Cambia ropa y accesorios sin dinero. Swipe, match e intercambio con puntos, hiper-local.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f5ee",
+  "theme_color": "#158a63",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='42' fill='%23158a63'/%3E%3Ctext x='96' y='96' font-family='system-ui,sans-serif' font-size='104' font-weight='850' fill='%23fffffb' text-anchor='middle' dominant-baseline='central'%3ET%3C/text%3E%3Ccircle cx='150' cy='150' r='30' fill='%23ef5f4c'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23158a63'/%3E%3Ctext x='256' y='256' font-family='system-ui,sans-serif' font-size='280' font-weight='850' fill='%23fffffb' text-anchor='middle' dominant-baseline='central'%3ET%3C/text%3E%3Ccircle cx='400' cy='400' r='80' fill='%23ef5f4c'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

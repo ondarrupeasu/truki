@@ -1,0 +1,195 @@
+<title>Truki — Estudio de mercado</title>
+<style>
+  :root{
+    --paper:#f5f5ee; --card:#fffffb; --ink:#201f19; --muted:#6c6a5f;
+    --line:#e7e4d7; --line-2:#dcd8c7;
+    --give:#158a63; --get:#ef5f4c; --gold:#c98a1e;
+    --shadow:0 1px 0 rgba(0,0,0,.02), 0 12px 30px -20px rgba(40,30,10,.35);
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --paper:#14140f; --card:#1e1d16; --ink:#efece1; --muted:#a3a091;
+    --line:#2c2a21; --line-2:#3a372c;
+    --give:#2fc38a; --get:#ff7a68; --gold:#e0aa4c;
+    --shadow:0 1px 0 rgba(255,255,255,.02), 0 14px 34px -22px rgba(0,0,0,.7);
+  }}
+  :root[data-theme="dark"]{
+    --paper:#14140f; --card:#1e1d16; --ink:#efece1; --muted:#a3a091;
+    --line:#2c2a21; --line-2:#3a372c;
+    --give:#2fc38a; --get:#ff7a68; --gold:#e0aa4c;
+    --shadow:0 1px 0 rgba(255,255,255,.02), 0 14px 34px -22px rgba(0,0,0,.7);
+  }
+  *{box-sizing:border-box}
+  html{background:var(--paper)}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); line-height:1.55}
+  .wrap{max-width:940px; margin:0 auto; padding:clamp(22px,5vw,60px) clamp(18px,5vw,44px) 72px}
+  h1,h2,h3{text-wrap:balance; letter-spacing:-.02em}
+  a{color:var(--give)}
+
+  /* hero */
+  .kicker{font-family:var(--mono); font-size:12.5px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin:0 0 16px}
+  .logo{display:flex; align-items:center; gap:14px; margin:0}
+  .logo .name{font-size:clamp(46px,10vw,86px); font-weight:850; line-height:.9; margin:0}
+  .logo .name b{color:var(--give)} .logo .name i{font-style:normal; color:var(--get)}
+  .swap{flex:none; width:clamp(44px,8vw,64px); height:clamp(44px,8vw,64px)}
+  .tagline{font-size:clamp(19px,2.6vw,26px); font-weight:650; margin:20px 0 6px}
+  .tagline .g{color:var(--get)}
+  .sub{max-width:60ch; color:var(--muted); font-size:clamp(15px,1.7vw,17px); margin:0}
+
+  /* stat strip */
+  .stats{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:30px 0 6px}
+  .stat{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px 18px; box-shadow:var(--shadow)}
+  .stat .n{font-size:clamp(24px,4vw,34px); font-weight:800; line-height:1; letter-spacing:-.02em}
+  .stat .n.give{color:var(--give)} .stat .n.get{color:var(--get)} .stat .n.gold{color:var(--gold)}
+  .stat .l{font-size:13px; color:var(--muted); margin-top:7px}
+
+  section{margin-top:46px}
+  .eyebrow{display:inline-flex; align-items:center; gap:8px; font-family:var(--mono); font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin:0 0 10px}
+  .eyebrow::before{content:""; width:22px; height:2px; background:var(--get); border-radius:2px}
+  h2{font-size:clamp(24px,3.4vw,34px); margin:0 0 12px; font-weight:800}
+  p.lead{font-size:clamp(16px,1.9vw,18.5px); color:var(--ink); margin:0 0 14px; max-width:66ch}
+  p{max-width:66ch}
+
+  .cards{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; margin-top:16px}
+  .comp{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px 15px; box-shadow:var(--shadow)}
+  .comp h3{font-size:16px; margin:0 0 4px}
+  .comp .tag{font-family:var(--mono); font-size:11px; color:var(--get); text-transform:uppercase; letter-spacing:.05em}
+  .comp p{font-size:13.5px; color:var(--muted); margin:6px 0 0}
+
+  .callout{background:linear-gradient(120deg, color-mix(in srgb,var(--give) 12%, var(--card)), var(--card)); border:1px solid var(--line-2); border-radius:18px; padding:22px 24px; margin-top:20px}
+  .callout h3{margin:0 0 6px; font-size:clamp(18px,2.4vw,23px)}
+  .callout p{margin:0; color:var(--ink)}
+
+  .money{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px}
+  .lever{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px 16px; box-shadow:var(--shadow)}
+  .lever.star{border-color:var(--get); background:linear-gradient(160deg, color-mix(in srgb,var(--get) 10%, var(--card)), var(--card))}
+  .lever h3{margin:0 0 4px; font-size:16px; display:flex; align-items:center; gap:8px}
+  .lever .badge{font-family:var(--mono); font-size:10px; background:var(--get); color:#fff; padding:2px 7px; border-radius:20px; text-transform:uppercase; letter-spacing:.05em}
+  .lever p{margin:0; font-size:13.5px; color:var(--muted)}
+
+  .risks{list-style:none; padding:0; margin:16px 0 0; display:grid; gap:10px}
+  .risks li{background:var(--card); border:1px solid var(--line); border-left:4px solid var(--gold); border-radius:10px; padding:12px 15px; font-size:14.5px}
+  .risks li b{color:var(--ink)}
+
+  .win{display:grid; gap:10px; margin-top:16px}
+  .win .row{display:flex; gap:12px; align-items:flex-start; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:13px 15px; box-shadow:var(--shadow)}
+  .win .dot{flex:none; width:11px; height:11px; border-radius:50%; margin-top:6px; background:var(--give)}
+  .win .row:nth-child(even) .dot{background:var(--get)}
+  .win b{display:block}
+  .win span{color:var(--muted); font-size:14px}
+
+  .verdict{margin-top:40px; background:var(--ink); color:var(--paper); border-radius:22px; padding:clamp(24px,4vw,38px)}
+  :root[data-theme="dark"] .verdict, :root:not([data-theme="light"]) .verdict{background:linear-gradient(135deg,#0f0f0b,#1b1a12); border:1px solid var(--line-2)}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .verdict{background:linear-gradient(135deg,#0f0f0b,#1b1a12); border:1px solid var(--line-2)}}
+  .verdict .eyebrow{color:color-mix(in srgb,var(--paper) 65%, transparent)}
+  .verdict .eyebrow::before{background:var(--give)}
+  .verdict h2{color:var(--paper); font-size:clamp(26px,4vw,40px); margin:0 0 10px}
+  .verdict p{color:color-mix(in srgb,var(--paper) 82%, transparent); font-size:clamp(15px,1.9vw,18px); margin:0; max-width:64ch}
+  .verdict .g{color:var(--get); font-weight:700} .verdict .v{color:var(--give); font-weight:700}
+
+  .foot{margin-top:34px; padding-top:18px; border-top:1px solid var(--line); font-size:13px; color:var(--muted); font-family:var(--mono)}
+  @media (max-width:560px){ .stats{grid-template-columns:1fr} .money{grid-template-columns:1fr} }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+
+  <p class="kicker">Estudio de mercado · ago 2026</p>
+  <div class="logo">
+    <svg class="swap" viewBox="0 0 64 64" aria-hidden="true">
+      <path d="M14 22 H44 M44 22 l-9 -8 M44 22 l-9 8" fill="none" stroke="var(--give)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M50 42 H20 M20 42 l9 -8 M20 42 l9 8" fill="none" stroke="var(--get)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <h1 class="name"><b>Tru</b><i>ki</i></h1>
+  </div>
+  <p class="tagline">Cambia ropa, <span class="g">no dinero.</span></p>
+  <p class="sub">Un vistazo honesto al mercado de la idea de Truki — la plataforma para <b>intercambiar</b> ropa
+  y accesorios con match tipo Tinder y <b>trukipuntos</b>. Hecho para el equipo de Truki. <em>Trukatu, ez erosi.</em></p>
+
+  <div class="stats">
+    <div class="stat"><div class="n give">~13%</div><div class="l">crecimiento anual estimado del mercado de apps de intercambio</div></div>
+    <div class="stat"><div class="n get">0</div><div class="l">líderes claros de intercambio de ROPA en España / Euskadi</div></div>
+    <div class="stat"><div class="n gold">6+</div><div class="l">apps parecidas ya existen — nicho emergente, no saturado</div></div>
+  </div>
+
+  <section>
+    <p class="eyebrow">La idea</p>
+    <h2>Un Wallapop, pero trukeando</h2>
+    <p class="lead">Subes lo que ya no te pones; en vez de venderlo, lo <b>intercambias</b>. Deslizas prendas como
+    en Tinder y, cuando hay match, cambiáis. Cada prenda vale unos <b>trukipuntos</b>, y si no te llegan para lo que
+    quieres, puedes comprar más. Con un detalle listo: <b>si las dos personas están de acuerdo, el cambio se hace
+    aunque no cuadren los puntos</b> — los puntos solo entran para equilibrar cuando hace falta.</p>
+  </section>
+
+  <section>
+    <p class="eyebrow">¿Ya existe algo así?</p>
+    <h2>Sí… pero es un terreno JOVEN, no está copado</h2>
+    <p>La reventa por dinero (Vinted, Wallapop) está saturada. El <b>intercambio puro</b>, en cambio, tiene
+    varios proyectos pequeños y <b>ningún ganador claro</b> — y menos aún en España y Euskadi. Eso es una buena señal:
+    hay demanda, pero el hueco sigue abierto.</p>
+    <div class="cards">
+      <div class="comp"><div class="tag">🌍 Internacional</div><h3>Swoopd</h3><p>Deslizar tipo Tinder y cambiar en vez de vender. Justo vuestra mecánica del match.</p></div>
+      <div class="comp"><div class="tag">🌍 Internacional</div><h3>BONNEE</h3><p>"Swap Coins" por niveles (plata/oro/platino) según el valor de la prenda.</p></div>
+      <div class="comp"><div class="tag">🌍 Internacional</div><h3>Nuw</h3><p>Ganas un token por cada prenda que subes y lo gastas en otra. Puntos puros.</p></div>
+      <div class="comp"><div class="tag">🌍 Internacional</div><h3>Closest Closet</h3><p>Cada prenda te da una "percha" (hanger) que usas como moneda para coger otra.</p></div>
+      <div class="comp"><div class="tag">🇪🇸 España</div><h3>Waki</h3><p>Trueque general (ropa, muebles, libros). Se vende como la mejor de España — pero no es solo ropa.</p></div>
+      <div class="comp"><div class="tag">🇪🇸 España</div><h3>Swappito · Ropantic</h3><p>Intercambio sin dinero / eventos de swap de ropa. Locales y pequeños.</p></div>
+    </div>
+  </section>
+
+  <div class="callout">
+    <h3>👏 Habéis acertado el manual del sector — sin copiarlo</h3>
+    <p>El match tipo Tinder, los puntos por prenda y el "comprar más puntos" son <b>exactamente</b> lo que hacen las
+    apps que funcionan (y lo de comprar puntos es el mismo modelo que usa <b>HomeExchange</b> para las casas). Llegar
+    a eso vosotras solas, en un trabajo de clase, dice mucho del olfato de la idea.</p>
+  </div>
+
+  <section>
+    <p class="eyebrow">¿De dónde sale el dinero?</p>
+    <h2>El swap gana poco… si te quedas solo en cambiar</h2>
+    <p>Como no hay una venta de la que llevarse comisión, <b>todas</b> las apps de intercambio añaden alguna vía de
+    ingresos. La buena noticia: vuestra idea de los puntos ya es la principal.</p>
+    <div class="money">
+      <div class="lever star"><h3>Comprar trukipuntos <span class="badge">vuestra idea</span></h3><p>Cuando no te llegan los puntos para lo que quieres, compras más. La vía más natural — y ya probada por HomeExchange y BONNEE.</p></div>
+      <div class="lever"><h3>Suscripción premium</h3><p>Más intercambios al mes, destacar tus prendas, sin límites. Ingreso recurrente.</p></div>
+      <div class="lever"><h3>Envío</h3><p>Quien recibe la prenda paga el envío. (Si empezáis en persona, esto ni hace falta.)</p></div>
+      <div class="lever"><h3>Destacar / marcas</h3><p>Pagar por aparecer arriba, verificar marcas, y alianzas con tiendas de moda circular.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">La parte honesta</p>
+    <h2>Los retos que hay que ganar</h2>
+    <ul class="risks">
+      <li><b>El huevo y la gallina (el gordo):</b> sin suficiente ropa y gente de tu talla y tu zona, no hay match. Hay que arrancar donde haya densidad.</li>
+      <li><b>¿Cuántos puntos vale una prenda?</b> Un sistema simple y justo (por tipo + estado) o habrá discusiones. Aquí se la juegan muchas.</li>
+      <li><b>Envíos y logística:</b> mover ropa cuesta y da pereza. Quedar en persona lo esquiva.</li>
+      <li><b>Confianza:</b> que la prenda esté como dice la foto, y nada de timos.</li>
+    </ul>
+  </section>
+
+  <section>
+    <p class="eyebrow">Vuestra jugada ganadora</p>
+    <h2>Empezad pequeñas, locales… y de aquí</h2>
+    <div class="win">
+      <div class="row"><span class="dot"></span><div><b>Hiper-local</b><span>Arrancad en un instituto o en Bilbao/Bizkaia. Con gente cerca hay matches de verdad, y quedáis en persona → sin envíos ni coste.</span></div></div>
+      <div class="row"><span class="dot"></span><div><b>Identidad vasca</b><span>Truki (de <i>trukatu</i>) = un intercambio "de aquí". Eso os diferencia de las apps globales frías.</span></div></div>
+      <div class="row"><span class="dot"></span><div><b>El match divertido</b><span>Deslizar prendas engancha al público joven — vuestro público.</span></div></div>
+      <div class="row"><span class="dot"></span><div><b>Puntos justos y flexibles</b><span>Valor simple por tipo + estado, y si las dos partes aceptan, cambio directo sin cuadrar. Humano.</span></div></div>
+      <div class="row"><span class="dot"></span><div><b>Sostenibilidad</b><span>Moda circular contra el "usar y tirar" → conecta con la gente joven y puede sumar apoyo del centro.</span></div></div>
+    </div>
+  </section>
+
+  <div class="verdict">
+    <p class="eyebrow">Veredicto</p>
+    <h2>Merece la pena. Empezad local.</h2>
+    <p>Es un mercado <span class="v">real y creciente</span>, la idea es sólida y tenéis un ángulo que os hace
+    distintas (local + euskara + match + puntos justos). Sí hay competencia y ganar dinero con el trueque es el punto
+    difícil del sector — pero <span class="g">los trukipuntos lo resuelven</span>. El siguiente paso no es competir
+    con medio mundo: es <b>arrancar pequeñito y cercano</b>, y aprender jugando.</p>
+  </div>
+
+  <p class="foot">Estudio de mercado para el equipo de Truki · hecho por aita · datos: BONNEE, Nuw, Swoopd, Closest Closet, Waki, informe de mercado de apps de swap (Dataintelo).</p>
+
+</div>
