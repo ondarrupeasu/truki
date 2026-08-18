@@ -388,9 +388,7 @@ const CATALOG = [
   {emoji:"👠", nm:"Botines negros",     cat:"abrigo",   estado:"bueno",     owner:"Maddi",  age:17, marca:"Stradivarius"},
 ];
 const INSTIS = [
-  {name:"IES Solokoetxe", live:true},   // el insti de arranque (hiper-local)
-  {name:"IES Miribilla",  live:false},
-  {name:"Txurdinaga BHI", live:false},
+  {name:"IES Solokoetxe", live:true},   // arrancamos SOLO aquí (hiper-local)
 ];
 
 /* ---- Estado de la app ---- */
@@ -462,9 +460,14 @@ function renderOnboard(){
       <label class="fld">Tu nombre o mote</label>
       <input class="txt" id="in-name" placeholder="p. ej. Alex" value="${S.user.name||''}" autocomplete="off" oninput="S.user.name=this.value">
       <label class="fld">Tu instituto</label>
-      <div class="grid2" id="insti-grid">
-        ${INSTIS.map((i,x)=>`<button class="pick ${obPickInsti===x?'sel':''} ${i.live?'':'wait'}" onclick="pickInsti(${x})"><span class="e">${i.live?'🏫':'🔒'}</span><span style="flex:1">${i.name}</span>${i.live?'':'<span class="waitlbl">en espera</span>'}</button>`).join("")}
-      </div>
+      ${ INSTIS.length===1
+        ? `<button class="pick sel" style="width:100%" onclick="pickInsti(0)">
+             <span class="e">🏫</span><span style="flex:1">${INSTIS[0].name}</span>
+             <span class="waitlbl" style="color:var(--give);border-color:var(--give)">activo</span></button>
+           <p class="sub" style="margin-top:10px;font-size:13px">Truki arranca <b>solo en Solokoetxe</b>. Más institutos, pronto. 🔒</p>`
+        : `<div class="grid2" id="insti-grid">
+             ${INSTIS.map((i,x)=>`<button class="pick ${obPickInsti===x?'sel':''} ${i.live?'':'wait'}" onclick="pickInsti(${x})"><span class="e">${i.live?'🏫':'🔒'}</span><span style="flex:1">${i.name}</span>${i.live?'':'<span class="waitlbl">en espera</span>'}</button>`).join("")}
+           </div>` }
       <div style="flex:1;min-height:16px"></div>
       <div class="steps"><i class="on"></i><i class="on"></i><i></i></div>
       <button class="btn give" style="margin-top:14px" id="ob-next1" onclick="obNext()">Siguiente</button>`;
