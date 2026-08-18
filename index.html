@@ -95,6 +95,9 @@
     font-weight:750; font-size:14px; cursor:pointer; text-align:left; color:var(--ink); font-family:inherit; display:flex; align-items:center; gap:8px}
   .pick .e{font-size:20px}
   .pick.sel{border-color:var(--give); background:var(--give-soft); box-shadow:inset 0 0 0 1px var(--give)}
+  .pick.wait{opacity:.55}
+  .pick .waitlbl{font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--muted);
+    background:var(--paper); border:1px solid var(--line); padding:2px 6px; border-radius:999px}
   .note{background:var(--give-soft); border:1px solid var(--line-2); border-radius:14px; padding:13px 15px;
     font-size:13.5px; color:var(--ink); margin-top:18px}
   .note b{color:var(--give)}
@@ -384,7 +387,11 @@ const CATALOG = [
   {emoji:"🧥", nm:"Sudadera capucha",   cat:"sudadera", estado:"bueno",     owner:"Ane",    age:15, marca:"Champion"},
   {emoji:"👠", nm:"Botines negros",     cat:"abrigo",   estado:"bueno",     owner:"Maddi",  age:17, marca:"Stradivarius"},
 ];
-const INSTIS = ["IES Botika","Insti Santutxu","IES Miribilla","Deusto BHI","Begoñazpi"];
+const INSTIS = [
+  {name:"IES Solokoetxe", live:true},   // el insti de arranque (hiper-local)
+  {name:"IES Miribilla",  live:false},
+  {name:"Txurdinaga BHI", live:false},
+];
 
 /* ---- Estado de la app ---- */
 const S = {
@@ -434,7 +441,7 @@ function syncChrome(){
 }
 
 /* ==================== ONBOARDING ==================== */
-let obStep=0, obPickInsti=null, obSeeds=new Set();
+let obStep=0, obPickInsti=0, obSeeds=new Set();  // Solokoetxe preseleccionado (único activo)
 function renderOnboard(){
   const b=document.getElementById("ob-body");
   if(obStep===0){
@@ -456,7 +463,7 @@ function renderOnboard(){
       <input class="txt" id="in-name" placeholder="p. ej. Alex" value="${S.user.name||''}" autocomplete="off" oninput="S.user.name=this.value">
       <label class="fld">Tu instituto</label>
       <div class="grid2" id="insti-grid">
-        ${INSTIS.map((i,x)=>`<button class="pick ${obPickInsti===x?'sel':''}" onclick="pickInsti(${x})"><span class="e">🏫</span>${i}</button>`).join("")}
+        ${INSTIS.map((i,x)=>`<button class="pick ${obPickInsti===x?'sel':''} ${i.live?'':'wait'}" onclick="pickInsti(${x})"><span class="e">${i.live?'🏫':'🔒'}</span><span style="flex:1">${i.name}</span>${i.live?'':'<span class="waitlbl">en espera</span>'}</button>`).join("")}
       </div>
       <div style="flex:1;min-height:16px"></div>
       <div class="steps"><i class="on"></i><i class="on"></i><i></i></div>
@@ -482,14 +489,17 @@ function renderOnboard(){
         ${chosen.length<3?`Elige ${3-chosen.length} más`:'Empezar a truquear 🔥'}</button>`;
   }
 }
-function pickInsti(x){ obPickInsti=x; renderOnboard(); }
+function pickInsti(x){
+  if(!INSTIS[x].live){ toast("Ese insti está en lista de espera 🔒 Truki abre primero en Solokoetxe"); return; }
+  obPickInsti=x; renderOnboard();
+}
 function toggleSeed(x){ obSeeds.has(x)?obSeeds.delete(x):obSeeds.add(x); renderOnboard(); }
 function obNext(){
   if(obStep===1){
     const nm=document.getElementById("in-name").value.trim();
     if(!nm){ toast("Ponte un nombre 🙂"); return; }
     if(obPickInsti===null){ toast("Elige tu instituto 🏫"); return; }
-    S.user.name=nm; S.user.insti=INSTIS[obPickInsti];
+    S.user.name=nm; S.user.insti=INSTIS[obPickInsti].name;
   }
   obStep++; renderOnboard();
 }
