@@ -8,3 +8,5 @@ fase1/uploads/*
 
 # Credenciales FTP (nunca subir)
 .ftp.env
+.env
+*.env
