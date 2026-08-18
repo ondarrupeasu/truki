@@ -5,3 +5,6 @@ fase1/data/*.sqlite
 fase1/data/*.sqlite-*
 fase1/uploads/*
 !fase1/uploads/.gitkeep
+
+# Credenciales FTP (nunca subir)
+.ftp.env
