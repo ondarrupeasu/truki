@@ -1,0 +1,11 @@
+# Pasa la cabecera Authorization a PHP (necesario en Apache/Infomaniak para el login por token)
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTP:Authorization} .
+  RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>
+
+# Nunca servir la configuración con credenciales
+<FilesMatch "^(config|config\.example)\.php$">
+  Require all denied
+</FilesMatch>

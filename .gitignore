@@ -1,1 +1,7 @@
 .DS_Store
+# Fase 1 — secretos y datos locales
+fase1/api/config.php
+fase1/data/*.sqlite
+fase1/data/*.sqlite-*
+fase1/uploads/*
+!fase1/uploads/.gitkeep
