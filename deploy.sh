@@ -22,7 +22,10 @@ fi
 echo "🔑 Usando credenciales de: $CRED"
 set -a; # shellcheck disable=SC1090
 . "$CRED"; set +a
-: "${FTP_HOST:?}"; : "${FTP_USER:?}"; : "${FTP_PASS:?}"; : "${FTP_DIR:?}"
+: "${FTP_HOST:?}"; : "${FTP_USER:?}"; : "${FTP_PASS:?}"
+# FTP_DIR admite vacío: con un usuario ACOTADO a la carpeta del sitio, los
+# ficheros van a la raíz de ese usuario. Normalizamos las barras.
+FTP_DIR="${FTP_DIR-}"; FTP_DIR="${FTP_DIR#/}"; FTP_DIR="${FTP_DIR%/}"
 
 # Archivos a subir (OJO: NUNCA subimos api/config.php para no pisar tu config MySQL
 # del servidor, ni las fotos de /uploads de la gente).
@@ -43,7 +46,7 @@ for f in "${FILES[@]}"; do
   # --ssl-reqd fuerza FTPS EXPLÍCITO (puerto 21). El usuario FTP "acotado" de
   # Infomaniak lo requiere; si da error de auth, casi siempre es esto.
   curl -sS --ssl-reqd --ftp-create-dirs -T "fase1/$f" \
-       -u "$FTP_USER:$FTP_PASS" "ftp://${FTP_HOST}${FTP_DIR}/$f" \
+       -u "$FTP_USER:$FTP_PASS" "ftp://${FTP_HOST}/${FTP_DIR:+$FTP_DIR/}$f" \
     || { echo "  ❌ Error subiendo $f"; exit 1; }
 done
 
