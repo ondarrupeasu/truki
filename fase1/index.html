@@ -300,6 +300,10 @@
         <div class="big">📸</div><div class="hint">Toca para hacer/elegir foto</div>
       </div>
       <input id="file" type="file" accept="image/*" style="display:none" onchange="onFile(event)">
+      <div id="photo-controls" style="display:none;gap:8px;margin-top:8px">
+        <button class="btn ghost sm" style="flex:1" onclick="recropCurrent()">🔄 Reencuadrar</button>
+        <button class="btn ghost sm" style="flex:1" onclick="document.getElementById('file').click()">🖼 Cambiar foto</button>
+      </div>
       <label class="fld">Nombre</label>
       <input class="txt" id="up-name" placeholder="p. ej. Vaqueros mom" oninput="livePts()">
       <label class="fld">Categoría</label>
@@ -730,6 +734,7 @@ function initUpload(){
     document.getElementById("up-name").value=ed.name;
     cat.value=ed.category; cond.value=ed.cond;
     drop.classList.add("has"); drop.innerHTML=`<img src="${ed.photo}">`;
+    document.getElementById("photo-controls").style.display="flex";
     document.getElementById("up-btn").textContent="Guardar cambios";
     document.getElementById("up-del").style.display="";
   } else {
@@ -738,6 +743,7 @@ function initUpload(){
     document.getElementById("up-lead").textContent="Haz una foto y elige categoría y estado. Los trukipuntos se calculan solos.";
     document.getElementById("up-name").value=""; cat.selectedIndex=0; cond.selectedIndex=0;
     drop.classList.remove("has"); drop.innerHTML=`<div class="big">📸</div><div class="hint">Toca para hacer/elegir foto</div>`;
+    document.getElementById("photo-controls").style.display="none";
     document.getElementById("up-btn").textContent="Publicar prenda";
     document.getElementById("up-del").style.display="none";
   }
@@ -751,6 +757,13 @@ function onFile(ev){
     const d=document.getElementById("drop"); d.classList.add("has"); d.innerHTML=`<img src="${URL.createObjectURL(blob)}">`;
   });
   rd.readAsDataURL(f);
+}
+function recropCurrent(){
+  const ed=S.editItem; if(!ed||!ed.photo) return;
+  openCropper(ed.photo, blob=>{
+    upFile=new File([blob],"foto.jpg",{type:"image/jpeg"});
+    const d=document.getElementById("drop"); d.classList.add("has"); d.innerHTML=`<img src="${URL.createObjectURL(blob)}">`;
+  });
 }
 function livePts(){
   const cat=document.getElementById("up-cat").value, cond=document.getElementById("up-cond").value;
