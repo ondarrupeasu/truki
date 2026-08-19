@@ -184,6 +184,59 @@ switch ($a) {
     json_out(['ok'=>true, 'points'=>(int)userrow($pdo,$u['id'])['points']]);
   }
 
+  /* ---------- EDITAR PRENDA (nombre/categoría/estado + foto opcional) ---------- */
+  case 'item_update': {
+    $u = require_user($pdo);
+    $id = (int) ($_POST['id'] ?? inp('id'));
+    $s = $pdo->prepare("SELECT * FROM items WHERE id=?"); $s->execute([$id]); $it = $s->fetch();
+    if (!$it) fail('Prenda no encontrada.', 404);
+    if ($it['user_id'] != $u['id']) fail('Esa prenda no es tuya.', 403);
+    if ($it['status'] === 'traded') fail('Esa prenda ya se intercambió, no se puede editar.');
+    $name = trim((string) ($_POST['name'] ?? $it['name']));
+    $cat  = (string) ($_POST['category'] ?? $it['category']);
+    $cond = (string) ($_POST['cond'] ?? $it['cond']);
+    if ($name === '') fail('La prenda necesita un nombre.');
+    $pts = points_for($cat, $cond);
+    if ($pts === null) fail('Categoría o estado no válidos.');
+    $photo = $it['photo'];
+    $c = cfg();
+    if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
+      $f = $_FILES['photo'];
+      if ($f['size'] > $c['max_upload']) fail('La foto pesa demasiado (máx. 5 MB).');
+      $info = @getimagesize($f['tmp_name']);
+      if (!$info) fail('El archivo no es una imagen válida.');
+      $ext = ['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'][$info['mime']] ?? null;
+      if (!$ext) fail('Formato no soportado (usa JPG, PNG o WEBP).');
+      $fn = bin2hex(random_bytes(8)).'.'.$ext;
+      if (!save_image($f['tmp_name'], $c['upload_dir'].'/'.$fn, $info, $ext)) fail('No se pudo guardar la foto.', 500);
+      if ($photo && file_exists($c['upload_dir'].'/'.$photo)) @unlink($c['upload_dir'].'/'.$photo);
+      $photo = $fn;
+    }
+    $pdo->prepare("UPDATE items SET name=?, category=?, cond=?, photo=?, points=? WHERE id=?")
+        ->execute([$name, $cat, $cond, $photo, $pts, $id]);
+    json_out(['item' => item_by_id($pdo, $id)]);
+  }
+
+  /* ---------- BORRAR PRENDA ---------- */
+  case 'item_delete': {
+    $u = require_user($pdo);
+    $id = (int) inp('id');
+    $s = $pdo->prepare("SELECT * FROM items WHERE id=?"); $s->execute([$id]); $it = $s->fetch();
+    if (!$it) fail('Prenda no encontrada.', 404);
+    if ($it['user_id'] != $u['id']) fail('Esa prenda no es tuya.', 403);
+    if ($it['status'] === 'traded') fail('Esa prenda ya se intercambió, no se puede borrar.');
+    $pdo->beginTransaction();
+    try {
+      $pdo->prepare("DELETE FROM swipes WHERE item_id=?")->execute([$id]);
+      $pdo->prepare("DELETE FROM matches WHERE status='pending' AND (item1=? OR item2=?)")->execute([$id, $id]);
+      $pdo->prepare("DELETE FROM items WHERE id=?")->execute([$id]);
+      $pdo->commit();
+    } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
+    $c = cfg();
+    if (!empty($it['photo']) && file_exists($c['upload_dir'].'/'.$it['photo'])) @unlink($c['upload_dir'].'/'.$it['photo']);
+    json_out(['ok' => true]);
+  }
+
   default:
     fail('Acción desconocida: "'.$a.'"', 404);
 }

@@ -5,7 +5,7 @@
   RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 </IfModule>
 
-# Nunca servir la configuración con credenciales
-<FilesMatch "^(config|config\.example)\.php$">
+# Nunca servir ningún archivo de configuración (config.php, config.prod.php, etc.)
+<FilesMatch "^config.*\.php$">
   Require all denied
 </FilesMatch>

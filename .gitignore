@@ -10,3 +10,6 @@ fase1/uploads/*
 .ftp.env
 .env
 *.env
+
+# Config de producción con credenciales de BD (nunca subir a git)
+fase1/api/config.prod.php

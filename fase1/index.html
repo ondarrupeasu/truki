@@ -271,8 +271,8 @@
       <div class="spacer"></div><div class="brand"><b>Tru</b><i>ki</i></div>
     </div>
     <div class="scroll"><div class="sec">
-      <div class="eyebrow">Nueva prenda</div><h2>Sube una prenda</h2>
-      <p class="lead">Haz una foto y elige categoría y estado. Los trukipuntos se calculan solos.</p>
+      <div class="eyebrow" id="up-eyebrow">Nueva prenda</div><h2 id="up-title">Sube una prenda</h2>
+      <p class="lead" id="up-lead">Haz una foto y elige categoría y estado. Los trukipuntos se calculan solos.</p>
       <div class="drop" id="drop" onclick="document.getElementById('file').click()">
         <div class="big">📸</div><div class="hint">Toca para hacer/elegir foto</div>
       </div>
@@ -286,6 +286,7 @@
       <div class="live-pts" id="up-pts">Vale — 🪙</div>
       <div class="err" id="up-err"></div>
       <button class="btn give" id="up-btn" onclick="doUpload()">Publicar prenda</button>
+      <button class="btn ghost" id="up-del" style="display:none;margin-top:10px;color:var(--get);border-color:var(--get)" onclick="doDelete()">🗑 Eliminar prenda</button>
     </div></div>
     <nav class="nav"></nav>
   </section>
@@ -316,8 +317,9 @@
     <div class="scroll">
       <div class="prof" id="prof-head"></div>
       <div class="sec" style="padding-top:8px">
-        <button class="btn give" onclick="go('upload')">＋ Subir prenda</button>
+        <button class="btn give" onclick="newItem()">＋ Subir prenda</button>
         <div class="eyebrow" style="margin-top:18px">Mi armario</div>
+        <p class="lead" id="armario-hint" style="margin:0 0 12px"></p>
         <div id="armario-list"></div>
         <button class="btn ghost" style="margin-top:8px" onclick="logout()">Cerrar sesión</button>
       </div>
@@ -349,7 +351,7 @@ const calcPts = (cat,cond)=> CATS[cat]&&CONDS[cond] ? Math.round(CATS[cat].base*
 const condLabel = c => CONDS[c]?.label || c;
 const catLabel  = c => CATS[c]?.label || c;
 
-const S = { user:null, feed:[], matches:[], me:null, trade:null };
+const S = { user:null, feed:[], matches:[], me:null, trade:null, editItem:null };
 
 /* ---- API helper ---- */
 async function api(action, {body=null, form=null}={}){
@@ -651,9 +653,14 @@ function renderProfile(){
       <span class="bdg">♻️ Anti fast-fashion</span>
     </div>`;
   const active=me.items.filter(i=>i.status!=='traded'), traded=me.items.filter(i=>i.status==='traded');
-  const row=it=>`<div class="item"><div class="ph"><img src="${it.photo}"></div>
-    <div><div class="tt">${esc(it.name)}</div><div class="st">${catLabel(it.category)} · ${condLabel(it.cond)}${it.status==='traded'?' · cambiada':''}</div></div>
-    <div class="pt">${it.points} 🪙</div></div>`;
+  const row=it=>{
+    const ed = it.status!=='traded';
+    return `<div class="item${ed?' match':''}" ${ed?`onclick="openEditItem(${it.id})"`:''}>
+      <div class="ph"><img src="${it.photo}"></div>
+      <div><div class="tt">${esc(it.name)}</div><div class="st">${catLabel(it.category)} · ${condLabel(it.cond)}${it.status==='traded'?' · cambiada':''}</div></div>
+      <div class="pt">${it.points} 🪙</div>${ed?'<div style="margin-left:8px;color:var(--muted);font-weight:800;font-size:20px">›</div>':''}</div>`;
+  };
+  document.getElementById("armario-hint").textContent = active.length ? "Toca una prenda para editarla o borrarla." : "";
   document.getElementById("armario-list").innerHTML =
     (me.items.length ? [...active,...traded].map(row).join("")
       : `<div style="color:var(--muted);font-size:13.5px;padding:6px 2px">Tu armario está vacío. Sube tu primera prenda 👆</div>`);
@@ -661,6 +668,13 @@ function renderProfile(){
 
 /* ===================== UPLOAD ===================== */
 let upFile=null;
+function newItem(){ S.editItem=null; go("upload"); }
+function openEditItem(id){
+  const it=(S.me?.items||[]).find(x=>x.id===id);
+  if(!it) return;
+  if(it.status==='traded'){ toast("Esa prenda ya se intercambió"); return; }
+  S.editItem=it; go("upload");
+}
 function initUpload(){
   const cat=document.getElementById("up-cat"), cond=document.getElementById("up-cond");
   if(!cat.options.length){
@@ -668,10 +682,27 @@ function initUpload(){
     cond.innerHTML=Object.entries(CONDS).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join("");
   }
   upFile=null;
-  document.getElementById("drop").classList.remove("has");
-  document.getElementById("drop").innerHTML=`<div class="big">📸</div><div class="hint">Toca para hacer/elegir foto</div>`;
-  document.getElementById("up-name").value=""; document.getElementById("up-err").textContent="";
-  document.getElementById("file").value=""; livePts();
+  const ed=S.editItem, drop=document.getElementById("drop");
+  document.getElementById("up-err").textContent=""; document.getElementById("file").value="";
+  if(ed){
+    document.getElementById("up-eyebrow").textContent="Editar prenda";
+    document.getElementById("up-title").textContent="Editar prenda";
+    document.getElementById("up-lead").textContent="Cambia lo que quieras. La foto, solo si quieres reemplazarla.";
+    document.getElementById("up-name").value=ed.name;
+    cat.value=ed.category; cond.value=ed.cond;
+    drop.classList.add("has"); drop.innerHTML=`<img src="${ed.photo}">`;
+    document.getElementById("up-btn").textContent="Guardar cambios";
+    document.getElementById("up-del").style.display="";
+  } else {
+    document.getElementById("up-eyebrow").textContent="Nueva prenda";
+    document.getElementById("up-title").textContent="Sube una prenda";
+    document.getElementById("up-lead").textContent="Haz una foto y elige categoría y estado. Los trukipuntos se calculan solos.";
+    document.getElementById("up-name").value=""; cat.selectedIndex=0; cond.selectedIndex=0;
+    drop.classList.remove("has"); drop.innerHTML=`<div class="big">📸</div><div class="hint">Toca para hacer/elegir foto</div>`;
+    document.getElementById("up-btn").textContent="Publicar prenda";
+    document.getElementById("up-del").style.display="none";
+  }
+  livePts();
 }
 function onFile(ev){
   const f=ev.target.files[0]; if(!f) return;
@@ -689,17 +720,33 @@ async function doUpload(){
   const name=document.getElementById("up-name").value.trim();
   const cat=document.getElementById("up-cat").value, cond=document.getElementById("up-cond").value;
   const err=document.getElementById("up-err"); err.textContent="";
-  if(!upFile){ err.textContent="Haz una foto de la prenda."; return; }
+  const ed=S.editItem;
+  if(!ed && !upFile){ err.textContent="Haz una foto de la prenda."; return; }
   if(!name){ err.textContent="Ponle un nombre."; return; }
   const fd=new FormData();
-  fd.append("name",name); fd.append("category",cat); fd.append("cond",cond); fd.append("photo",upFile);
+  fd.append("name",name); fd.append("category",cat); fd.append("cond",cond);
+  if(upFile) fd.append("photo",upFile);
   spin(true);
   try{
-    await api("upload",{form:fd});
-    await loadMe();
-    toast("👗 ¡Prenda publicada!");
-    go("profile"); renderProfile();
+    if(ed){ fd.append("id",ed.id); await api("item_update",{form:fd}); toast("✏️ Prenda actualizada"); }
+    else  { await api("upload",{form:fd}); toast("👗 ¡Prenda publicada!"); }
+    S.editItem=null; await loadMe(); go("profile"); renderProfile();
   }catch(e){ err.textContent=e.message; }
+  finally{ spin(false); }
+}
+function doDelete(){
+  const ed=S.editItem; if(!ed) return;
+  openSheet(`<div class="grab"></div><h3>¿Borrar "${esc(ed.name)}"?</h3>
+    <p>Se quitará de tu armario y del feed. Esto no se puede deshacer.</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn get" onclick="confirmDelete()">Sí, borrar</button>
+      <button class="btn ghost" onclick="closeSheet()">Cancelar</button></div>`);
+}
+async function confirmDelete(){
+  const ed=S.editItem; closeSheet(); if(!ed) return;
+  spin(true);
+  try{ await api("item_delete",{body:{id:ed.id}}); S.editItem=null; await loadMe(); toast("🗑 Prenda borrada"); go("profile"); renderProfile(); }
+  catch(e){ toast(e.message); }
   finally{ spin(false); }
 }
 
