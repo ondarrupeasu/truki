@@ -344,7 +344,6 @@
         <div class="eyebrow" style="margin-top:18px">Mi armario</div>
         <p class="lead" id="armario-hint" style="margin:0 0 12px"></p>
         <div id="armario-list"></div>
-        <div id="admin-box"></div>
         <button class="btn ghost" style="margin-top:8px" onclick="logout()">Cerrar sesión</button>
       </div>
     </div>
@@ -700,10 +699,6 @@ function renderProfile(){
       <div><div class="tt">${esc(it.name)}</div><div class="st">${catLabel(it.category)} · ${condLabel(it.cond)}${it.status==='traded'?' · cambiada':''}</div></div>
       <div class="pt">${it.points} 🪙</div>${ed?'<div style="margin-left:8px;color:var(--muted);font-weight:800;font-size:20px">›</div>':''}</div>`;
   };
-  document.getElementById("admin-box").innerHTML = me.is_admin
-    ? `<div class="eyebrow" style="margin-top:22px">Admin 👑</div>
-       <button class="btn ghost" onclick="openAdminSheet()">🧹 Gestionar cuentas / limpieza</button>`
-    : "";
   document.getElementById("armario-hint").textContent = active.length ? "Toca una prenda para editarla o borrarla." : "";
   document.getElementById("armario-list").innerHTML =
     (me.items.length ? [...active,...traded].map(row).join("")
@@ -877,52 +872,6 @@ function setAvatarEmoji(e){
   closeSheet(); spin(true);
   api("profile_avatar",{body:{emoji:e}}).then(r=>{ S.me.user=r.user; S.user=r.user; renderProfile(); toast("Avatar actualizado ✨"); })
     .catch(err=>toast(err.message)).finally(()=>spin(false));
-}
-
-/* ===================== ADMIN (limpieza segura) ===================== */
-async function openAdminSheet(){
-  spin(true);
-  try{
-    const r = await api("admin_users");
-    const rows = r.users.map(u=>`
-      <div class="item">
-        <div><div class="tt">${esc(u.username)}${u.is_admin?' 👑':''}</div>
-          <div class="st">${u.items} prenda(s) · ${u.points} 🪙</div></div>
-        ${u.is_admin ? '<span class="st" style="margin-left:auto">tú</span>'
-          : `<button class="btn get sm" style="width:auto;margin-left:auto" onclick="adminDelUser(${u.id}, '${esc(u.username).replace(/'/g,"\\'")}')">Borrar</button>`}
-      </div>`).join("");
-    openSheet(`<div class="grab"></div><h3>Gestionar cuentas 👑</h3>
-      <p>Borra cuentas de prueba de forma segura (tu cuenta no se puede borrar aquí).</p>
-      <div style="max-height:46vh;overflow:auto">${rows || '<p>No hay usuarios.</p>'}</div>
-      <button class="btn ghost" style="margin-top:12px;color:var(--get);border-color:var(--get)" onclick="adminReset()">🧨 Vaciar todo (empezar de cero)</button>`);
-  }catch(e){ toast(e.message); }
-  finally{ spin(false); }
-}
-function adminDelUser(id, name){
-  openSheet(`<div class="grab"></div><h3>¿Borrar a "${esc(name)}"?</h3>
-    <p>Se borra su cuenta y todas sus prendas. No se puede deshacer.</p>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <button class="btn get" onclick="confirmAdminDel(${id})">Sí, borrar</button>
-      <button class="btn ghost" onclick="openAdminSheet()">Cancelar</button></div>`);
-}
-async function confirmAdminDel(id){
-  spin(true);
-  try{ await api("admin_delete_user",{body:{id}}); toast("Cuenta borrada"); await openAdminSheet(); }
-  catch(e){ toast(e.message); }
-  finally{ spin(false); }
-}
-function adminReset(){
-  openSheet(`<div class="grab"></div><h3>🧨 Vaciar todo</h3>
-    <p>Borra todas las cuentas, prendas y datos para empezar limpio. <b>Tú mantienes tu cuenta</b>, pero sin prendas ni puntos.</p>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <button class="btn get" onclick="confirmAdminReset()">Sí, vaciar todo</button>
-      <button class="btn ghost" onclick="openAdminSheet()">Cancelar</button></div>`);
-}
-async function confirmAdminReset(){
-  closeSheet(); spin(true);
-  try{ await api("admin_reset"); await loadMe(); toast("✨ Todo limpio"); go("profile"); renderProfile(); }
-  catch(e){ toast(e.message); }
-  finally{ spin(false); }
 }
 
 /* ===================== UI helpers ===================== */

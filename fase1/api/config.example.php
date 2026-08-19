@@ -10,6 +10,7 @@ return [
     'user' => 'tu_usuario',
     'pass' => 'tu_contraseña',
   ],
+  'admin_pass' => '',                  // contraseña para entrar en /admin (déjala vacía para desactivar el panel)
   'sqlite'     => __DIR__ . '/../data/truki.sqlite',
   'upload_dir' => __DIR__ . '/../uploads',
   'upload_url' => 'uploads',           // ruta pública de las fotos

@@ -90,8 +90,16 @@ function item_by_id($pdo, $id){
   $s->execute([$id]); $r=$s->fetch(); return $r ? pubitem($r) : null;
 }
 
-/* --- ¿Es admin? (el primer usuario registrado) --- */
-function is_admin($u){ return (int)($u['is_admin'] ?? 0) === 1; }
+/* --- Sesión de admin (login por contraseña en /admin) --- */
+function require_admin($pdo){
+  $t = bearer();
+  if ($t) {
+    $s = $pdo->prepare("SELECT token FROM admin_tokens WHERE token=?");
+    $s->execute([$t]);
+    if ($s->fetch()) return true;
+  }
+  fail('Acceso de admin requerido. Entra en /admin.', 401);
+}
 
 /* --- Borrado en cascada de un usuario (o solo su contenido) --- */
 function delete_user_content($pdo, $id){

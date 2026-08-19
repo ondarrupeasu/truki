@@ -41,6 +41,11 @@ function init_schema($pdo, $driver){
     created_at INT
   )");
 
+  $pdo->exec("CREATE TABLE IF NOT EXISTS admin_tokens(
+    token      VARCHAR(64) PRIMARY KEY,
+    created_at INT
+  )");
+
   $pdo->exec("CREATE TABLE IF NOT EXISTS items(
     id $auto,
     user_id    INT NOT NULL,

@@ -24,9 +24,8 @@ switch ($a) {
     if (mb_strlen($p) < 4)                        fail('La contraseña debe tener al menos 4 caracteres.');
     $s = $pdo->prepare("SELECT id FROM users WHERE username = ?"); $s->execute([$u]);
     if ($s->fetch()) fail('Ese usuario ya existe, elige otro.');
-    $first = ((int) $pdo->query("SELECT COUNT(*) c FROM users")->fetch()['c'] === 0) ? 1 : 0;  // el 1º es admin
-    $pdo->prepare("INSERT INTO users(username,pass_hash,insti,points,created_at,is_admin) VALUES(?,?,?,?,?,?)")
-        ->execute([$u, password_hash($p, PASSWORD_DEFAULT), 'IES Solokoetxe', 0, now(), $first]);
+    $pdo->prepare("INSERT INTO users(username,pass_hash,insti,points,created_at) VALUES(?,?,?,?,?)")
+        ->execute([$u, password_hash($p, PASSWORD_DEFAULT), 'IES Solokoetxe', 0, now()]);
     $id = (int) $pdo->lastInsertId();
     $tok = newtoken();
     $pdo->prepare("INSERT INTO tokens(token,user_id,created_at) VALUES(?,?,?)")->execute([$tok,$id,now()]);
@@ -58,7 +57,6 @@ switch ($a) {
       'items'  => array_map('pubitem', $it->fetchAll()),
       'txns'   => $tx->fetchAll(),
       'trukis' => (int) $mc->fetch()['c'],
-      'is_admin' => is_admin($u),
     ]);
   }
 
@@ -272,25 +270,32 @@ switch ($a) {
     fail('No enviaste ni emoji ni foto.');
   }
 
+  /* ---------- ADMIN: entrar con contraseña ---------- */
+  case 'admin_login': {
+    $set = (string) (cfg()['admin_pass'] ?? '');
+    if ($set === '') fail('El panel de admin no está configurado en el servidor.', 500);
+    $pass = (string) inp('password');
+    if (!hash_equals($set, $pass)) fail('Contraseña incorrecta.', 401);
+    $tok = newtoken();
+    $pdo->prepare("INSERT INTO admin_tokens(token,created_at) VALUES(?,?)")->execute([$tok, now()]);
+    json_out(['token' => $tok]);
+  }
+
   /* ---------- ADMIN: listar usuarios ---------- */
   case 'admin_users': {
-    $u = require_user($pdo);
-    if (!is_admin($u)) fail('Solo el admin puede hacer esto.', 403);
-    $s = $pdo->query("SELECT u.id, u.username, u.points, u.is_admin,
+    require_admin($pdo);
+    $s = $pdo->query("SELECT u.id, u.username, u.points,
                         (SELECT COUNT(*) FROM items i WHERE i.user_id=u.id) AS items
                       FROM users u ORDER BY u.id");
     json_out(['users' => array_map(function($r){
-      return ['id'=>(int)$r['id'],'username'=>$r['username'],'points'=>(int)$r['points'],
-              'items'=>(int)$r['items'],'is_admin'=>(int)$r['is_admin']===1];
+      return ['id'=>(int)$r['id'],'username'=>$r['username'],'points'=>(int)$r['points'],'items'=>(int)$r['items']];
     }, $s->fetchAll())]);
   }
 
   /* ---------- ADMIN: borrar una cuenta (con todo lo suyo) ---------- */
   case 'admin_delete_user': {
-    $u = require_user($pdo);
-    if (!is_admin($u)) fail('Solo el admin puede hacer esto.', 403);
+    require_admin($pdo);
     $id = (int) inp('id');
-    if ($id === (int) $u['id']) fail('No puedes borrar tu propia cuenta de admin.');
     if (!userrow($pdo, $id)) fail('Usuario no encontrado.', 404);
     $pdo->beginTransaction();
     try { delete_user_cascade($pdo, $id); $pdo->commit(); }
@@ -298,17 +303,15 @@ switch ($a) {
     json_out(['ok' => true]);
   }
 
-  /* ---------- ADMIN: reset total (mantiene tu cuenta admin, sin datos) ---------- */
+  /* ---------- ADMIN: reset total (borra TODO) ---------- */
   case 'admin_reset': {
-    $u = require_user($pdo);
-    if (!is_admin($u)) fail('Solo el admin puede hacer esto.', 403);
-    $me = (int) $u['id'];
+    require_admin($pdo);
+    $c = cfg();
+    foreach ($pdo->query("SELECT photo FROM items")->fetchAll() as $r) if (!empty($r['photo'])) @unlink($c['upload_dir'].'/'.$r['photo']);
+    foreach ($pdo->query("SELECT avatar FROM users WHERE avatar LIKE 'img:%'")->fetchAll() as $r) @unlink($c['upload_dir'].'/'.substr($r['avatar'], 4));
     $pdo->beginTransaction();
     try {
-      $others = $pdo->prepare("SELECT id FROM users WHERE id<>?"); $others->execute([$me]);
-      foreach ($others->fetchAll() as $r) delete_user_cascade($pdo, (int) $r['id']);
-      delete_user_content($pdo, $me);
-      $pdo->prepare("UPDATE users SET points=0 WHERE id=?")->execute([$me]);
+      foreach (['txns','swipes','matches','items','tokens','users'] as $t) $pdo->exec("DELETE FROM $t");
       $pdo->commit();
     } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
     json_out(['ok' => true]);
