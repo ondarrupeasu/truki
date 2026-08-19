@@ -90,6 +90,29 @@ function item_by_id($pdo, $id){
   $s->execute([$id]); $r=$s->fetch(); return $r ? pubitem($r) : null;
 }
 
+/* --- ¿Es admin? (el primer usuario registrado) --- */
+function is_admin($u){ return (int)($u['is_admin'] ?? 0) === 1; }
+
+/* --- Borrado en cascada de un usuario (o solo su contenido) --- */
+function delete_user_content($pdo, $id){
+  $c = cfg();
+  $its = $pdo->prepare("SELECT id, photo FROM items WHERE user_id=?"); $its->execute([$id]);
+  $ids = [];
+  foreach ($its->fetchAll() as $r) { $ids[] = (int)$r['id']; if (!empty($r['photo'])) @unlink($c['upload_dir'].'/'.$r['photo']); }
+  $pdo->prepare("DELETE FROM txns WHERE user_id=?")->execute([$id]);
+  $pdo->prepare("DELETE FROM swipes WHERE user_id=?")->execute([$id]);
+  if ($ids) { $in = implode(',', array_fill(0, count($ids), '?')); $pdo->prepare("DELETE FROM swipes WHERE item_id IN ($in)")->execute($ids); }
+  $pdo->prepare("DELETE FROM matches WHERE user1=? OR user2=?")->execute([$id, $id]);
+  $pdo->prepare("DELETE FROM items WHERE user_id=?")->execute([$id]);
+}
+function delete_user_cascade($pdo, $id){
+  $c = cfg(); $us = userrow($pdo, $id);
+  delete_user_content($pdo, $id);
+  if ($us && !empty($us['avatar']) && strncmp($us['avatar'], 'img:', 4) === 0) @unlink($c['upload_dir'].'/'.substr($us['avatar'], 4));
+  $pdo->prepare("DELETE FROM tokens WHERE user_id=?")->execute([$id]);
+  $pdo->prepare("DELETE FROM users WHERE id=?")->execute([$id]);
+}
+
 /* --- Ajuste de puntos + registro del movimiento --- */
 function adjust($pdo, $uid, $delta, $reason){
   $pdo->prepare("UPDATE users SET points = points + ? WHERE id = ?")->execute([$delta, $uid]);

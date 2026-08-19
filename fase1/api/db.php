@@ -98,6 +98,11 @@ function run_migrations($pdo, $driver){
     }
     set_schema_version($pdo, 1);
   }
+
+  if ($ver < 2) {
+    ensure_column($pdo, 'users', 'is_admin', 'INT DEFAULT 0');
+    set_schema_version($pdo, 2);
+  }
 }
 function set_schema_version($pdo, $v){
   try { $pdo->prepare("INSERT INTO schema_meta(k,v) VALUES('version',?)")->execute([(string) $v]); }
