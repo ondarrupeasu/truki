@@ -76,4 +76,35 @@ function init_schema($pdo, $driver){
     reason     VARCHAR(120),
     created_at INT
   )");
+
+  run_migrations($pdo, $driver);
+}
+
+/* Migraciones versionadas: cada bloque se ejecuta UNA sola vez. */
+function run_migrations($pdo, $driver){
+  $pdo->exec("CREATE TABLE IF NOT EXISTS schema_meta(k VARCHAR(32) PRIMARY KEY, v VARCHAR(64))");
+  $ver = 0;
+  try { $r = $pdo->query("SELECT v FROM schema_meta WHERE k='version'")->fetch(); if ($r) $ver = (int) $r['v']; }
+  catch (Throwable $e) {}
+
+  if ($ver < 1) {
+    ensure_column($pdo, 'users', 'avatar', 'VARCHAR(160)');
+    // Los emojis (4 bytes) necesitan utf8mb4; la BD venía en utf8mb3.
+    if ($driver !== 'sqlite') {
+      foreach (['users','items','swipes','matches','txns','tokens'] as $t) {
+        try { $pdo->exec("ALTER TABLE $t CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"); }
+        catch (Throwable $e) {}
+      }
+    }
+    set_schema_version($pdo, 1);
+  }
+}
+function set_schema_version($pdo, $v){
+  try { $pdo->prepare("INSERT INTO schema_meta(k,v) VALUES('version',?)")->execute([(string) $v]); }
+  catch (Throwable $e) { $pdo->prepare("UPDATE schema_meta SET v=? WHERE k='version'")->execute([(string) $v]); }
+}
+/* Añade una columna si no existe (portable MySQL/SQLite). */
+function ensure_column($pdo, $table, $col, $def){
+  try { $pdo->exec("ALTER TABLE $table ADD COLUMN $col $def"); }
+  catch (Throwable $e) { /* la columna ya existe */ }
 }

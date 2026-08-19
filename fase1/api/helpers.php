@@ -63,7 +63,14 @@ function points_for($cat, $cond){
 
 /* --- Vistas públicas (nunca exponen pass_hash) --- */
 function pubuser($u){
-  return ['id'=>(int)$u['id'],'username'=>$u['username'],'insti'=>$u['insti'],'points'=>(int)$u['points']];
+  $c = cfg();
+  $av = $u['avatar'] ?? '';
+  $avatar = ['type'=>'none', 'value'=>''];
+  if ($av !== '' && $av !== null) {
+    if (strncmp($av, 'img:', 4) === 0) $avatar = ['type'=>'img', 'value'=>$c['upload_url'].'/'.substr($av, 4)];
+    else $avatar = ['type'=>'emoji', 'value'=>$av];
+  }
+  return ['id'=>(int)$u['id'],'username'=>$u['username'],'insti'=>$u['insti'],'points'=>(int)$u['points'],'avatar'=>$avatar];
 }
 function pubitem($r){
   $c = cfg();

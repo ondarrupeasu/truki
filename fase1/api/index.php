@@ -237,6 +237,39 @@ switch ($a) {
     json_out(['ok' => true]);
   }
 
+  /* ---------- FOTO / AVATAR DE PERFIL ---------- */
+  case 'profile_avatar': {
+    $u = require_user($pdo);
+    $c = cfg();
+    $oldImg = (!empty($u['avatar']) && strncmp($u['avatar'], 'img:', 4) === 0) ? substr($u['avatar'], 4) : null;
+
+    // Opción A: emoji / avatar
+    $emoji = inp('emoji');
+    if ($emoji !== null && $emoji !== '') {
+      $e = mb_substr((string) $emoji, 0, 8);
+      $pdo->prepare("UPDATE users SET avatar=? WHERE id=?")->execute([$e, $u['id']]);
+      if ($oldImg && file_exists($c['upload_dir'].'/'.$oldImg)) @unlink($c['upload_dir'].'/'.$oldImg);
+      json_out(['user' => pubuser(userrow($pdo, $u['id']))]);
+    }
+
+    // Opción B: foto
+    if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
+      $f = $_FILES['photo'];
+      if ($f['size'] > $c['max_upload']) fail('La foto pesa demasiado (máx. 5 MB).');
+      $info = @getimagesize($f['tmp_name']);
+      if (!$info) fail('El archivo no es una imagen válida.');
+      $ext = ['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'][$info['mime']] ?? null;
+      if (!$ext) fail('Formato no soportado (usa JPG, PNG o WEBP).');
+      $fn = 'av_'.bin2hex(random_bytes(8)).'.'.$ext;
+      if (!save_image($f['tmp_name'], $c['upload_dir'].'/'.$fn, $info, $ext)) fail('No se pudo guardar la foto.', 500);
+      $pdo->prepare("UPDATE users SET avatar=? WHERE id=?")->execute(['img:'.$fn, $u['id']]);
+      if ($oldImg && file_exists($c['upload_dir'].'/'.$oldImg)) @unlink($c['upload_dir'].'/'.$oldImg);
+      json_out(['user' => pubuser(userrow($pdo, $u['id']))]);
+    }
+
+    fail('No enviaste ni emoji ni foto.');
+  }
+
   default:
     fail('Acción desconocida: "'.$a.'"', 404);
 }

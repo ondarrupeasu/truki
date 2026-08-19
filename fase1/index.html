@@ -203,6 +203,29 @@
   .spin.show{display:grid}
   .spin i{width:34px; height:34px; border:3px solid var(--line-2); border-top-color:var(--give); border-radius:999px; animation:sp .7s linear infinite}
   @keyframes sp{to{transform:rotate(360deg)}}
+
+  /* Recortador de foto (zoom + reposición) */
+  .cropov{position:absolute; inset:0; z-index:80; background:#0b0b08; display:none; flex-direction:column;
+    align-items:center; justify-content:center; padding:24px; gap:16px}
+  .cropov.show{display:flex}
+  .crop-head{color:#e9e6da; font-size:13px; font-weight:700; text-align:center; opacity:.85; max-width:30ch}
+  .crop-stage{position:relative; width:min(86vw,340px); height:min(86vw,340px); overflow:hidden; border-radius:18px;
+    background:#000; touch-action:none; box-shadow:0 0 0 1px rgba(255,255,255,.14)}
+  .crop-stage img{position:absolute; top:0; left:0; transform-origin:0 0; will-change:transform;
+    -webkit-user-drag:none; user-select:none; max-width:none}
+  .crop-zoom{width:min(86vw,340px); accent-color:var(--give)}
+  .crop-btns{display:flex; gap:10px; width:min(86vw,340px)}
+
+  /* Avatar de perfil */
+  .ava{overflow:hidden}
+  .ava img{width:100%; height:100%; object-fit:cover; display:block}
+  .ava-wrap{position:relative; width:84px; height:84px; margin:0 auto 10px; cursor:pointer}
+  .ava-wrap .ava{margin:0}
+  .ava-wrap::after{content:"📷"; position:absolute; right:-2px; bottom:-2px; width:28px; height:28px; border-radius:999px;
+    background:var(--card); border:1px solid var(--line-2); display:grid; place-items:center; font-size:14px}
+  .ava-pick{width:46px; height:46px; border-radius:999px; border:1.5px solid var(--line-2); background:var(--card);
+    font-size:24px; cursor:pointer; display:grid; place-items:center; padding:0}
+  .ava-pick:active{transform:scale(.92)}
 </style>
 
 <div id="app">
@@ -331,6 +354,18 @@
   <div class="ov" id="ov"><div class="sheet" id="ov-sheet"></div></div>
   <div class="toast" id="toast"></div>
   <div class="spin" id="spin"><i></i></div>
+
+  <!-- Recortador de foto -->
+  <div class="cropov" id="cropov">
+    <div class="crop-head">Encuadra la foto — arrastra para mover, pellizca o usa el zoom</div>
+    <div class="crop-stage" id="crop-stage"><img id="crop-img" alt="" draggable="false"></div>
+    <input type="range" id="crop-zoom" class="crop-zoom" min="1" max="4" step="0.01" value="1">
+    <div class="crop-btns">
+      <button class="btn ghost" onclick="cropCancel()">Cancelar</button>
+      <button class="btn give" onclick="cropConfirm()">Usar foto</button>
+    </div>
+  </div>
+  <input id="avatar-file" type="file" accept="image/*" style="display:none" onchange="onAvatarFile(event)">
 </div>
 
 <script>
@@ -637,8 +672,12 @@ async function loadMe(){ try{ const me=await api("me"); S.me=me; S.user=me.user;
 function renderProfile(){
   const me=S.me; if(!me) return;
   const u=me.user, initial=(u.username[0]||"?").toUpperCase();
+  const av=u.avatar||{type:'none'};
+  const avaInner = av.type==='img' ? `<img src="${av.value}" alt="">`
+    : av.type==='emoji' ? `<span style="font-size:44px;line-height:1">${av.value}</span>`
+    : initial;
   document.getElementById("prof-head").innerHTML=`
-    <div class="ava">${initial}</div>
+    <div class="ava-wrap" onclick="openAvatarSheet()"><div class="ava">${avaInner}</div></div>
     <div class="nm">${esc(u.username)}</div>
     <div class="in">📍 ${esc(u.insti)} · miembro fundador</div>
     <div class="kpis">
@@ -705,11 +744,12 @@ function initUpload(){
   livePts();
 }
 function onFile(ev){
-  const f=ev.target.files[0]; if(!f) return;
-  if(f.size>5*1024*1024){ toast("La foto pesa demasiado (máx 5 MB)"); return; }
-  upFile=f;
+  const f=ev.target.files[0]; if(!f) return; ev.target.value="";
   const rd=new FileReader();
-  rd.onload=e=>{ const d=document.getElementById("drop"); d.classList.add("has"); d.innerHTML=`<img src="${e.target.result}">`; };
+  rd.onload=e=>openCropper(e.target.result, blob=>{
+    upFile=new File([blob],"foto.jpg",{type:"image/jpeg"});
+    const d=document.getElementById("drop"); d.classList.add("has"); d.innerHTML=`<img src="${URL.createObjectURL(blob)}">`;
+  });
   rd.readAsDataURL(f);
 }
 function livePts(){
@@ -750,6 +790,90 @@ async function confirmDelete(){
   finally{ spin(false); }
 }
 
+/* ===================== RECORTADOR DE FOTO ===================== */
+let crop=null, cropCb=null; const cropPtrs=new Map(); let cropPinch=null;
+function openCropper(src, cb){
+  cropCb=cb;
+  document.getElementById("cropov").classList.add("show");
+  const img=document.getElementById("crop-img");
+  img.onload=()=>{
+    const size=document.getElementById("crop-stage").clientWidth;
+    const iw=img.naturalWidth, ih=img.naturalHeight;
+    const min=Math.max(size/iw, size/ih);
+    crop={size, iw, ih, min, scale:min, x:(size-iw*min)/2, y:(size-ih*min)/2};
+    document.getElementById("crop-zoom").value=1;
+    applyCrop();
+  };
+  img.src=src;
+}
+function clampCrop(){
+  const c=crop, w=c.iw*c.scale, h=c.ih*c.scale;
+  c.x=Math.min(0, Math.max(c.size-w, c.x));
+  c.y=Math.min(0, Math.max(c.size-h, c.y));
+}
+function applyCrop(){ clampCrop(); document.getElementById("crop-img").style.transform=`translate(${crop.x}px,${crop.y}px) scale(${crop.scale})`; }
+function cropSetScale(ns, cx, cy){
+  const c=crop; ns=Math.max(c.min, Math.min(c.min*6, ns));
+  const ix=(cx-c.x)/c.scale, iy=(cy-c.y)/c.scale;
+  c.scale=ns; c.x=cx-ix*ns; c.y=cy-iy*ns; applyCrop();
+  document.getElementById("crop-zoom").value=Math.min(4, ns/c.min);
+}
+function cropInit(){
+  const stage=document.getElementById("crop-stage");
+  stage.addEventListener("pointerdown", e=>{ stage.setPointerCapture(e.pointerId); cropPtrs.set(e.pointerId,{x:e.clientX,y:e.clientY}); });
+  stage.addEventListener("pointermove", e=>{
+    if(!crop||!cropPtrs.has(e.pointerId)) return;
+    const prev=cropPtrs.get(e.pointerId), cur={x:e.clientX,y:e.clientY}; cropPtrs.set(e.pointerId,cur);
+    if(cropPtrs.size===1){ crop.x+=cur.x-prev.x; crop.y+=cur.y-prev.y; applyCrop(); }
+    else if(cropPtrs.size===2){
+      const p=[...cropPtrs.values()], dist=Math.hypot(p[0].x-p[1].x, p[0].y-p[1].y), r=stage.getBoundingClientRect();
+      if(cropPinch) cropSetScale(crop.scale*(dist/cropPinch), (p[0].x+p[1].x)/2-r.left, (p[0].y+p[1].y)/2-r.top);
+      cropPinch=dist;
+    }
+  });
+  const end=e=>{ cropPtrs.delete(e.pointerId); if(cropPtrs.size<2) cropPinch=null; };
+  stage.addEventListener("pointerup", end); stage.addEventListener("pointercancel", end);
+  stage.addEventListener("wheel", e=>{ if(!crop) return; e.preventDefault(); const r=stage.getBoundingClientRect();
+    cropSetScale(crop.scale*(e.deltaY<0?1.08:0.93), e.clientX-r.left, e.clientY-r.top); }, {passive:false});
+  document.getElementById("crop-zoom").addEventListener("input", e=>{ if(!crop) return; cropSetScale(crop.min*parseFloat(e.target.value), crop.size/2, crop.size/2); });
+}
+function cropConfirm(){
+  if(!crop){ closeCropper(); return; }
+  const c=crop, target=1000, k=target/c.size;
+  const cv=document.createElement("canvas"); cv.width=target; cv.height=target;
+  cv.getContext("2d").drawImage(document.getElementById("crop-img"), c.x*k, c.y*k, c.iw*c.scale*k, c.ih*c.scale*k);
+  cv.toBlob(b=>{ const cb=cropCb; closeCropper(); if(cb&&b) cb(b); }, "image/jpeg", 0.85);
+}
+function cropCancel(){ closeCropper(); }
+function closeCropper(){ document.getElementById("cropov").classList.remove("show"); cropCb=null; crop=null; cropPtrs.clear(); cropPinch=null; }
+
+/* ===================== AVATAR DE PERFIL ===================== */
+const AVATARS=['🦊','🐱','🐼','🐰','🦋','🌸','⭐','🔥','👑','🧢','👟','🛹','🎧','🌈','🍒','💚','🧡','😎'];
+function openAvatarSheet(){
+  openSheet(`<div class="grab"></div><h3>Tu foto de perfil</h3>
+    <p>Haz una foto y encuádrala, o elige un avatar.</p>
+    <button class="btn give" onclick="closeSheet();document.getElementById('avatar-file').click()">📸 Foto de perfil</button>
+    <div style="display:flex;flex-wrap:wrap;gap:9px;justify-content:center;margin-top:16px">
+      ${AVATARS.map(e=>`<button class="ava-pick" onclick="setAvatarEmoji('${e}')">${e}</button>`).join("")}
+    </div>`);
+}
+function onAvatarFile(ev){
+  const f=ev.target.files[0]; if(!f) return; ev.target.value="";
+  const rd=new FileReader();
+  rd.onload=e=>openCropper(e.target.result, blob=>{
+    const fd=new FormData(); fd.append("photo", new File([blob],"avatar.jpg",{type:"image/jpeg"}));
+    spin(true);
+    api("profile_avatar",{form:fd}).then(r=>{ S.me.user=r.user; S.user=r.user; syncChrome(); renderProfile(); toast("📸 Foto de perfil actualizada"); })
+      .catch(err=>toast(err.message)).finally(()=>spin(false));
+  });
+  rd.readAsDataURL(f);
+}
+function setAvatarEmoji(e){
+  closeSheet(); spin(true);
+  api("profile_avatar",{body:{emoji:e}}).then(r=>{ S.me.user=r.user; S.user=r.user; renderProfile(); toast("Avatar actualizado ✨"); })
+    .catch(err=>toast(err.message)).finally(()=>spin(false));
+}
+
 /* ===================== UI helpers ===================== */
 function openSheet(html){ const ov=document.getElementById("ov"); document.getElementById("ov-sheet").innerHTML=html;
   ov.classList.add("show"); ov.onclick=e=>{ if(e.target===ov) closeSheet(); }; }
@@ -761,6 +885,7 @@ function esc(s){ return String(s??"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 
 /* ===================== INIT ===================== */
 setMode("login");
+cropInit();
 if (TOKEN) boot(false); else go("auth");
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
